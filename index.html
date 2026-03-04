@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>한 모금 - 가상 흡연 금연 도우미</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-card: #16161e;
+            --accent: #ff6b35;
+            --ember: #ff3d00;
+            --text: #e8e8ec;
+            --text-dim: #8888a0;
+            --success: #4ade80;
+            --danger: #ef4444;
+            --border: #2a2a3a;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+            min-height: 100dvh;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        .app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+            max-width: 430px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* Header */
+        .header {
+            padding: 16px 20px 8px;
+            text-align: center;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        .header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+        .header h1 span { color: var(--accent); }
+
+        .mic-toggle {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            background: transparent;
+            color: var(--text-dim);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+        .mic-toggle.active {
+            border-color: var(--success);
+            color: var(--success);
+            background: rgba(74, 222, 128, 0.1);
+        }
+        .mic-toggle svg { width: 18px; height: 18px; }
+
+        /* Views */
+        .view { display: none; flex: 1; overflow-y: auto; padding: 0 20px 20px; }
+        .view.active { display: flex; flex-direction: column; }
+
+        /* ===== SMOKE VIEW ===== */
+        #smoke-view {
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            padding: 0;
+        }
+
+        .smoke-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* Touch zone - full area */
+        .touch-zone {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 5;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Cigarette */
+        .cigarette-wrapper {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            pointer-events: none;
+        }
+
+        .cigarette {
+            width: 28px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            /* 필터(40) + 최대paper(160) + ember(8) + 최대ash(30) = 238 고정 */
+            height: 238px;
+        }
+
+        .ash {
+            width: 26px; height: 0;
+            background: linear-gradient(to bottom, #555 0%, #888 40%, #aaa 100%);
+            border-radius: 2px 2px 0 0;
+            transition: height 0.5s ease;
+            position: relative;
+        }
+        .ash::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.3), transparent);
+        }
+
+        .ember {
+            width: 28px; height: 8px;
+            background: #444;
+            border-radius: 2px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        .ember.glowing {
+            background: var(--ember);
+            box-shadow: 0 0 15px var(--ember), 0 0 30px rgba(255, 61, 0, 0.5), 0 0 60px rgba(255, 61, 0, 0.2);
+        }
+        .ember::before {
+            content: '';
+            position: absolute;
+            top: -2px; left: 2px; right: 2px; height: 4px;
+            background: transparent;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+        .ember.glowing::before {
+            background: #ff8800;
+            box-shadow: 0 0 8px #ff6600;
+        }
+
+        .paper {
+            width: 26px;
+            background: linear-gradient(90deg, #f0ead6 0%, #f5f0dc 30%, #efe8d0 70%, #f0ead6 100%);
+            border-left: 1px solid rgba(0,0,0,0.05);
+            border-right: 1px solid rgba(0,0,0,0.05);
+            transition: height 0.5s ease;
+            position: relative;
+        }
+        .paper::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 8px, rgba(0,0,0,0.02) 8px, rgba(0,0,0,0.02) 9px);
+        }
+
+        .filter {
+            width: 28px; height: 40px;
+            background: linear-gradient(90deg, #cc8844 0%, #dda855 30%, #cc8844 70%, #bb7733 100%);
+            border-radius: 0 0 3px 3px;
+            position: relative;
+        }
+        .filter::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 4px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.15), transparent);
+        }
+
+        /* Status */
+        .status-area {
+            pointer-events: none;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .status-text {
+            font-size: 14px;
+            color: var(--text-dim);
+            min-height: 44px;
+            transition: all 0.2s;
+        }
+        .status-text .action {
+            font-size: 20px;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .status-text .action.inhale { color: var(--accent); }
+        .status-text .action.exhale { color: #88bbff; }
+
+        .puff-counter {
+            margin-top: 12px;
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+        .puff-counter strong { color: var(--accent); font-size: 20px; }
+
+        /* Puff progress ring */
+        .progress-ring {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            pointer-events: none;
+        }
+        .progress-ring circle {
+            transition: stroke-dashoffset 0.3s ease;
+        }
+
+        /* Breathing guide circle */
+        .breath-guide {
+            position: absolute;
+            width: 200px; height: 200px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 107, 53, 0);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        .breath-guide.active {
+            border-color: rgba(255, 107, 53, 0.2);
+            animation: breathPulse 1.5s ease infinite;
+        }
+
+        @keyframes breathPulse {
+            0%, 100% { transform: scale(0.95); border-color: rgba(255, 107, 53, 0.1); }
+            50% { transform: scale(1.05); border-color: rgba(255, 107, 53, 0.3); }
+        }
+
+        /* Hint animation */
+        .hint {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-dim);
+            font-size: 14px;
+            pointer-events: none;
+            animation: hintFade 3s ease infinite;
+        }
+        .hint.hidden { display: none; }
+
+        .hint-finger {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            border: 2px solid var(--text-dim);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: hintPress 3s ease infinite;
+        }
+
+        @keyframes hintPress {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            30% { transform: scale(0.85); opacity: 1; background: rgba(255,107,53,0.2); }
+            60% { transform: scale(1); opacity: 0.5; }
+        }
+        @keyframes hintFade {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 0.8; }
+        }
+
+        /* Done overlay */
+        .done-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(10, 10, 15, 0.92);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            padding: 40px;
+        }
+        .done-overlay.show { display: flex; }
+        .done-overlay h2 { font-size: 24px; margin-bottom: 8px; }
+        .done-overlay p {
+            color: var(--text-dim);
+            margin-bottom: 24px;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .btn {
+            padding: 14px 32px;
+            border-radius: 12px;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: #e5572a; }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border);
+            color: var(--text);
+            margin-top: 12px;
+        }
+
+        /* ===== RECORD VIEW ===== */
+        #record-view { gap: 16px; padding-top: 8px; }
+
+        .today-summary {
+            background: linear-gradient(135deg, #1a1525, #1e1530);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+        }
+        .today-summary .date { font-size: 13px; color: var(--text-dim); margin-bottom: 12px; }
+        .today-summary .count { font-size: 48px; font-weight: 800; color: var(--accent); line-height: 1; }
+        .today-summary .label { font-size: 14px; color: var(--text-dim); margin-top: 4px; }
+
+        .today-summary .goal {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+        }
+        .goal-bar {
+            flex: 1; max-width: 200px; height: 8px;
+            background: var(--border); border-radius: 4px; overflow: hidden;
+        }
+        .goal-bar-fill {
+            height: 100%; border-radius: 4px;
+            transition: width 0.5s ease;
+            background: var(--success);
+        }
+        .goal-bar-fill.over { background: var(--danger); }
+        .goal-text { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+
+        .record-list { display: flex; flex-direction: column; gap: 8px; }
+
+        .record-day {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .record-day .day-info { display: flex; flex-direction: column; gap: 2px; }
+        .record-day .day-date { font-size: 15px; font-weight: 600; }
+        .record-day .day-detail { font-size: 12px; color: var(--text-dim); }
+        .record-day .day-count { font-size: 22px; font-weight: 700; color: var(--accent); }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-dim); }
+        .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+        .empty-state p { font-size: 14px; line-height: 1.6; }
+
+        /* ===== STATS VIEW ===== */
+        #stats-view { gap: 16px; padding-top: 8px; }
+
+        .stat-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: 14px;
+            padding: 18px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .stat-card .stat-label { font-size: 12px; color: var(--text-dim); }
+        .stat-card .stat-value { font-size: 28px; font-weight: 800; }
+        .stat-card .stat-unit { font-size: 13px; color: var(--text-dim); }
+
+        .stat-card.highlight {
+            background: linear-gradient(135deg, rgba(255,107,53,0.15), rgba(255,107,53,0.05));
+            border: 1px solid rgba(255,107,53,0.2);
+        }
+        .stat-card.highlight .stat-value { color: var(--accent); }
+        .stat-card.success {
+            background: linear-gradient(135deg, rgba(74,222,128,0.1), rgba(74,222,128,0.03));
+            border: 1px solid rgba(74,222,128,0.15);
+        }
+        .stat-card.success .stat-value { color: var(--success); }
+
+        .weekly-chart {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 20px;
+        }
+        .weekly-chart h3 { font-size: 15px; font-weight: 600; margin-bottom: 20px; }
+        .chart-bars {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            height: 120px;
+            gap: 8px;
+        }
+        .chart-bar-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+            gap: 6px;
+        }
+        .chart-bar-track { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+        .chart-bar {
+            width: 100%;
+            border-radius: 4px 4px 0 0;
+            background: var(--accent);
+            transition: height 0.5s ease;
+            min-height: 2px;
+            opacity: 0.7;
+        }
+        .chart-bar.today { opacity: 1; }
+        .chart-bar-count { font-size: 11px; font-weight: 700; min-height: 14px; }
+        .chart-bar-label { font-size: 11px; color: var(--text-dim); }
+
+        .tip-card {
+            background: linear-gradient(135deg, #152025, #101a20);
+            border: 1px solid rgba(74, 222, 128, 0.15);
+            border-radius: 14px;
+            padding: 20px;
+        }
+        .tip-card h3 { font-size: 14px; color: var(--success); margin-bottom: 10px; }
+        .tip-card p { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+
+        /* ===== SETTINGS ===== */
+        .settings-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 100;
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .settings-overlay.show { display: flex; }
+
+        .settings-panel {
+            background: var(--bg-card);
+            width: 100%; max-width: 430px;
+            border-radius: 20px 20px 0 0;
+            padding: 24px 20px 40px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .settings-panel h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .settings-panel .close-btn {
+            background: none; border: none;
+            color: var(--text-dim); font-size: 24px; cursor: pointer;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .setting-item:last-child { border-bottom: none; }
+        .setting-label { font-size: 15px; }
+        .setting-label small { display: block; font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+
+        .setting-input {
+            width: 70px; padding: 8px 12px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 16px;
+            text-align: center;
+        }
+        .setting-input:focus { outline: none; border-color: var(--accent); }
+
+        .btn-danger { background: var(--danger); color: white; width: 100%; margin-top: 20px; }
+
+        /* ===== BOTTOM NAV ===== */
+        .bottom-nav {
+            display: flex;
+            border-top: 1px solid var(--border);
+            background: rgba(16, 16, 24, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 8px 0;
+            padding-bottom: max(8px, env(safe-area-inset-bottom));
+            z-index: 10;
+        }
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 0;
+            cursor: pointer;
+            color: var(--text-dim);
+            transition: color 0.2s;
+            background: none;
+            border: none;
+            font-family: inherit;
+        }
+        .nav-item:hover { color: var(--text); }
+        .nav-item.active { color: var(--accent); }
+        .nav-item svg { width: 24px; height: 24px; }
+        .nav-item span { font-size: 11px; font-weight: 500; }
+
+        /* Mic boost indicator */
+        .mic-boost {
+            position: absolute;
+            top: 60px;
+            right: 16px;
+            font-size: 11px;
+            color: var(--success);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 6;
+        }
+        .mic-boost.show { opacity: 1; }
+
+        /* Volume meter */
+        .vol-meter {
+            position: absolute;
+            top: 60px;
+            left: 16px;
+            z-index: 6;
+            pointer-events: none;
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 10px;
+            color: var(--text-dim);
+        }
+        .vol-meter.show { display: flex; }
+        .vol-bar-track {
+            width: 60px; height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .vol-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: var(--accent);
+            transition: width 0.05s linear;
+        }
+        .vol-label { line-height: 1; }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <h1><span>한 모금</span></h1>
+            <button class="mic-toggle" id="micToggle" title="마이크 (후~ 불기 감지)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                    <line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+            </button>
+        </header>
+
+        <!-- SMOKE VIEW -->
+        <div id="smoke-view" class="view active">
+            <canvas class="smoke-canvas" id="smokeCanvas"></canvas>
+
+            <div class="mic-boost" id="micBoost">BLOW +</div>
+            <div class="vol-meter" id="volMeter">
+                <div class="vol-label" id="volLabel">vol: 0</div>
+                <div class="vol-bar-track"><div class="vol-bar-fill" id="volFill"></div></div>
+                <div class="vol-label" id="freqLabel">lo:0 hi:0</div>
+            </div>
+
+            <div class="touch-zone" id="touchZone">
+                <div class="cigarette-wrapper">
+                    <div class="breath-guide" id="breathGuide"></div>
+                    <div class="cigarette" id="cigarette">
+                        <div class="ash" id="ash"></div>
+                        <div class="ember" id="ember"></div>
+                        <div class="paper" id="paper" style="height: 160px;"></div>
+                        <div class="filter"></div>
+                    </div>
+                </div>
+
+                <div class="status-area">
+                    <div class="status-text" id="statusText">
+                        화면을 꾹 눌러서 한 모금
+                    </div>
+                    <div class="puff-counter" id="puffCounter">
+                        퍼프 <strong id="puffCount">0</strong> / <span id="maxPuffs">12</span>
+                    </div>
+                </div>
+
+                <div class="hint" id="hint">
+                    <div class="hint-finger">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 18v-6M8 18v-4M16 18v-2M6 12a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v6H6v-6z"/>
+                        </svg>
+                    </div>
+                    꾹 누르기 = 들이쉬기<br>떼기 = 내쉬기
+                </div>
+            </div>
+
+            <div class="done-overlay" id="doneOverlay">
+                <h2>한 개비 완료</h2>
+                <p id="doneMessage">기록되었습니다.</p>
+                <button class="btn btn-primary" id="newCigBtn">새 담배 피우기</button>
+                <button class="btn btn-outline" id="viewRecordBtn">기록 보기</button>
+            </div>
+        </div>
+
+        <!-- RECORD VIEW -->
+        <div id="record-view" class="view">
+            <div class="today-summary">
+                <div class="date" id="todayDate"></div>
+                <div class="count" id="todayCount">0</div>
+                <div class="label">개비</div>
+                <div class="goal">
+                    <div class="goal-bar">
+                        <div class="goal-bar-fill" id="goalBarFill" style="width: 0%"></div>
+                    </div>
+                    <div class="goal-text" id="goalText">0 / 10</div>
+                </div>
+            </div>
+            <div class="record-list" id="recordList"></div>
+        </div>
+
+        <!-- STATS VIEW -->
+        <div id="stats-view" class="view">
+            <div class="stat-cards" id="statCards"></div>
+            <div class="weekly-chart">
+                <h3>주간 추이</h3>
+                <div class="chart-bars" id="chartBars"></div>
+            </div>
+            <div class="tip-card">
+                <h3>금연 팁</h3>
+                <p id="tipText"></p>
+            </div>
+        </div>
+
+        <!-- BOTTOM NAV -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-view="smoke-view">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 3.34a10 10 0 1 1-14.99 8.3A10 10 0 0 1 17 3.34"/>
+                    <path d="M12 6v6l4 2"/>
+                </svg>
+                <span>흡연</span>
+            </button>
+            <button class="nav-item" data-view="record-view">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span>기록</span>
+            </button>
+            <button class="nav-item" data-view="stats-view">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"/>
+                    <line x1="12" y1="20" x2="12" y2="4"/>
+                    <line x1="6" y1="20" x2="6" y2="14"/>
+                </svg>
+                <span>통계</span>
+            </button>
+            <button class="nav-item" id="settingsBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+                <span>설정</span>
+            </button>
+        </nav>
+
+        <!-- SETTINGS -->
+        <div class="settings-overlay" id="settingsOverlay">
+            <div class="settings-panel">
+                <h2>설정 <button class="close-btn" id="closeSettings">&times;</button></h2>
+                <div class="setting-item">
+                    <div class="setting-label">하루 목표<small>하루 최대 개비 수</small></div>
+                    <input type="number" class="setting-input" id="goalInput" min="1" max="50" value="10">
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">한 개비 퍼프 수<small>한 개비에 필요한 퍼프</small></div>
+                    <input type="number" class="setting-input" id="puffsInput" min="3" max="30" value="12">
+                </div>
+                <button class="btn btn-danger" id="resetDataBtn">모든 기록 초기화</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+// ===== STATE =====
+const S = {
+    pressing: false,
+    micActive: false,
+    blowing: false,
+    micInhaling: false,
+    micExhaling: false,
+    puffs: 0,
+    maxPuffs: 12,
+    dailyGoal: 10,
+    paperHeight: 160,
+    ashHeight: 0,
+    done: false,
+    inhaleFrames: 0,
+    firstInteraction: false,
+};
+
+// ===== PERSISTENCE =====
+function loadData() {
+    try { return JSON.parse(localStorage.getItem('hanmogum_data')) || { records: [] }; }
+    catch { return { records: [] }; }
+}
+function saveData(d) { localStorage.setItem('hanmogum_data', JSON.stringify(d)); }
+
+function loadSettings() {
+    try {
+        const s = JSON.parse(localStorage.getItem('hanmogum_settings'));
+        if (s) { S.maxPuffs = s.maxPuffs || 12; S.dailyGoal = s.dailyGoal || 10; }
+    } catch {}
+}
+function saveSettings() {
+    localStorage.setItem('hanmogum_settings', JSON.stringify({ maxPuffs: S.maxPuffs, dailyGoal: S.dailyGoal }));
+}
+
+function todayKey() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function addRecord() {
+    const data = loadData();
+    const key = todayKey();
+    let day = data.records.find(r => r.date === key);
+    if (!day) { day = { date: key, cigarettes: [] }; data.records.push(day); }
+    day.cigarettes.push({
+        time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+        puffs: S.puffs,
+    });
+    saveData(data);
+}
+
+function getTodayCount() {
+    const data = loadData();
+    const day = data.records.find(r => r.date === todayKey());
+    return day ? day.cigarettes.length : 0;
+}
+
+// ===== DOM =====
+const $ = id => document.getElementById(id);
+const ember = $('ember');
+const paper = $('paper');
+const ash = $('ash');
+const canvas = $('smokeCanvas');
+const ctx = canvas.getContext('2d');
+const statusText = $('statusText');
+const touchZone = $('touchZone');
+const hint = $('hint');
+const breathGuide = $('breathGuide');
+const micBoost = $('micBoost');
+
+// ===== CANVAS =====
+function resizeCanvas() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * devicePixelRatio;
+    canvas.height = rect.height * devicePixelRatio;
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// ===== SMOKE PARTICLES =====
+let particles = [];
+
+class Smoke {
+    constructor(x, y, boost = false) {
+        this.x = x + (Math.random() - 0.5) * 14;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * (boost ? 2.5 : 1.5);
+        this.vy = -(Math.random() * (boost ? 3.5 : 2.5) + 1.5);
+        this.size = Math.random() * (boost ? 12 : 8) + 4;
+        this.growRate = Math.random() * 0.4 + 0.15;
+        this.opacity = Math.random() * 0.35 + 0.15;
+        this.fadeRate = Math.random() * 0.004 + 0.002;
+        this.life = 1;
+        this.wobble = Math.random() * Math.PI * 2;
+        this.wobbleSpeed = Math.random() * 0.03 + 0.01;
+    }
+
+    update() {
+        this.wobble += this.wobbleSpeed;
+        this.x += this.vx + Math.sin(this.wobble) * 0.4;
+        this.y += this.vy;
+        this.vy *= 0.997;
+        this.size += this.growRate;
+        this.life -= this.fadeRate;
+        return this.life > 0;
+    }
+
+    draw(c) {
+        const a = this.life * this.opacity;
+        if (a <= 0) return;
+        const g = c.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
+        g.addColorStop(0, `rgba(190, 190, 205, ${a})`);
+        g.addColorStop(0.5, `rgba(170, 170, 188, ${a * 0.5})`);
+        g.addColorStop(1, `rgba(150, 150, 168, 0)`);
+        c.beginPath();
+        c.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        c.fillStyle = g;
+        c.fill();
+    }
+}
+
+function getEmberPos() {
+    const e = $('ember');
+    const r = e.getBoundingClientRect();
+    const cr = canvas.getBoundingClientRect();
+    return { x: r.left + r.width / 2 - cr.left, y: r.top - cr.top };
+}
+
+function emitSmoke(count = 3, boost = false) {
+    const p = getEmberPos();
+    for (let i = 0; i < count; i++) {
+        particles.push(new Smoke(p.x, p.y, boost));
+    }
+}
+
+// Ember sparks
+let sparks = [];
+class Spark {
+    constructor(x, y) {
+        this.x = x + (Math.random() - 0.5) * 14;
+        this.y = y + (Math.random() - 0.5) * 6;
+        this.vx = (Math.random() - 0.5) * 1;
+        this.vy = -(Math.random() * 2 + 0.5);
+        this.size = Math.random() * 2 + 0.8;
+        this.life = 1;
+        this.fade = Math.random() * 0.04 + 0.02;
+    }
+    update() {
+        this.x += this.vx; this.y += this.vy;
+        this.life -= this.fade;
+        return this.life > 0;
+    }
+    draw(c) {
+        c.beginPath();
+        c.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        c.fillStyle = `rgba(255, ${Math.floor(120 + 100 * this.life)}, 0, ${this.life})`;
+        c.fill();
+    }
+}
+
+function animate() {
+    const w = canvas.width / devicePixelRatio;
+    const h = canvas.height / devicePixelRatio;
+    ctx.clearRect(0, 0, w, h);
+
+    particles = particles.filter(p => p.update());
+    particles.forEach(p => p.draw(ctx));
+
+    sparks = sparks.filter(s => s.update());
+    sparks.forEach(s => s.draw(ctx));
+
+    // 들이쉬기 상태 (터치 OR 마이크 감지)
+    if ((S.pressing || S.micInhaling) && !S.done) {
+        const pos = getEmberPos();
+        if (Math.random() > 0.4) sparks.push(new Spark(pos.x, pos.y));
+
+        S.inhaleFrames++;
+        if (S.inhaleFrames >= 40) {
+            registerPuff();
+            S.inhaleFrames = 0;
+        }
+    }
+
+    requestAnimationFrame(animate);
+}
+animate();
+
+// ===== TOUCH INTERACTION =====
+function startInhale(e) {
+    if (S.done) return;
+    e.preventDefault();
+
+    if (!S.firstInteraction) {
+        S.firstInteraction = true;
+        hint.classList.add('hidden');
+    }
+
+    S.pressing = true;
+    S.inhaleFrames = 0;
+    ember.classList.add('glowing');
+    breathGuide.classList.add('active');
+    statusText.innerHTML = '<span class="action inhale">들이쉬는 중...</span>';
+
+    // Haptic
+    if (navigator.vibrate) navigator.vibrate(30);
+}
+
+function endInhale(e) {
+    if (!S.pressing) return;
+    e.preventDefault();
+
+    S.pressing = false;
+    ember.classList.remove('glowing');
+    breathGuide.classList.remove('active');
+
+    if (S.done) return;
+
+    // Exhale: emit smoke
+    statusText.innerHTML = '<span class="action exhale">후—</span>';
+    const count = Math.min(Math.floor(S.inhaleFrames / 4) + 3, 20);
+    emitSmoke(count, S.blowing);
+
+    if (navigator.vibrate) navigator.vibrate(15);
+
+    // Reset status after a moment
+    setTimeout(() => {
+        if (!S.pressing && !S.micInhaling && !S.micExhaling && !S.done) {
+            statusText.textContent = S.micActive ? '습/후 소리를 내보세요' : '화면을 꾹 눌러서 한 모금';
+        }
+    }, 1200);
+}
+
+touchZone.addEventListener('mousedown', startInhale);
+touchZone.addEventListener('mouseup', endInhale);
+touchZone.addEventListener('mouseleave', endInhale);
+touchZone.addEventListener('touchstart', startInhale, { passive: false });
+touchZone.addEventListener('touchend', endInhale, { passive: false });
+touchZone.addEventListener('touchcancel', endInhale, { passive: false });
+
+// Prevent context menu on long press
+touchZone.addEventListener('contextmenu', e => e.preventDefault());
+
+// ===== PUFF LOGIC =====
+function registerPuff() {
+    if (S.done) return;
+    S.puffs++;
+    $('puffCount').textContent = S.puffs;
+
+    const ratio = S.puffs / S.maxPuffs;
+    S.paperHeight = Math.max(20, 160 * (1 - ratio));
+    S.ashHeight = Math.min(30, ratio * 40);
+    paper.style.height = S.paperHeight + 'px';
+    ash.style.height = S.ashHeight + 'px';
+
+    if (navigator.vibrate) navigator.vibrate(10);
+
+    if (S.puffs >= S.maxPuffs) completeCigarette();
+}
+
+function completeCigarette() {
+    S.done = true;
+    S.pressing = false;
+    ember.classList.remove('glowing');
+    breathGuide.classList.remove('active');
+    addRecord();
+
+    const todayCount = getTodayCount();
+    const msg = $('doneMessage');
+    if (todayCount <= S.dailyGoal) {
+        msg.innerHTML = `오늘 ${todayCount}개비째입니다.<br>진짜 담배 대신 한 모금으로 충분해요.`;
+    } else {
+        msg.innerHTML = `오늘 ${todayCount}개비 — 목표(${S.dailyGoal})를 넘었어요.<br>조금만 줄여볼까요?`;
+    }
+    $('doneOverlay').classList.add('show');
+
+    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+}
+
+function resetCigarette() {
+    S.puffs = 0;
+    S.paperHeight = 160;
+    S.ashHeight = 0;
+    S.done = false;
+    S.inhaleFrames = 0;
+    $('puffCount').textContent = '0';
+    paper.style.height = '160px';
+    ash.style.height = '0';
+    ember.classList.remove('glowing');
+    $('doneOverlay').classList.remove('show');
+    statusText.textContent = S.micActive ? '습/후 소리를 내보세요' : '화면을 꾹 눌러서 한 모금';
+    particles = [];
+    sparks = [];
+}
+
+$('newCigBtn').addEventListener('click', resetCigarette);
+$('viewRecordBtn').addEventListener('click', () => {
+    resetCigarette();
+    document.querySelector('[data-view="record-view"]').click();
+});
+
+// ===== MIC (PRIMARY - 습/후 자동 구분) =====
+let audioCtx, analyser, micStream, freqData, timeData;
+let micSilenceFrames = 0;      // 무음 프레임 카운터
+let micSoundFrames = 0;        // 유음 프레임 카운터
+let lastMicState = 'idle';     // idle / inhaling / exhaling
+
+$('micToggle').addEventListener('click', async () => {
+    if (S.micActive) {
+        stopMic();
+        return;
+    }
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true }
+        });
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 1024;
+        analyser.smoothingTimeConstant = 0.6;
+        analyser.minDecibels = -90;  // 더 조용한 소리도 감지
+        analyser.maxDecibels = -10;
+
+        // 게인 노드로 신호 증폭
+        const gainNode = audioCtx.createGain();
+        gainNode.gain.value = 12.0;  // 12배 증폭 (들숨 소리 보정)
+
+        const src = audioCtx.createMediaStreamSource(stream);
+        src.connect(gainNode);
+        gainNode.connect(analyser);
+        micStream = stream;
+        freqData = new Uint8Array(analyser.frequencyBinCount);
+        timeData = new Uint8Array(analyser.frequencyBinCount);
+
+        S.micActive = true;
+        $('micToggle').classList.add('active');
+        $('volMeter').classList.add('show');
+        statusText.innerHTML = '마이크 ON — 습/후 소리를 내보세요';
+        hint.classList.add('hidden');
+        detectSound();
+    } catch {
+        alert('마이크 권한이 필요합니다.');
+    }
+});
+
+function stopMic() {
+    S.micActive = false;
+    S.micInhaling = false;
+    S.micExhaling = false;
+    $('micToggle').classList.remove('active');
+    $('volMeter').classList.remove('show');
+    micBoost.classList.remove('show');
+    ember.classList.remove('glowing');
+    if (micStream) micStream.getTracks().forEach(t => t.stop());
+    if (audioCtx) audioCtx.close();
+    audioCtx = null;
+    lastMicState = 'idle';
+    if (!S.pressing) statusText.textContent = '화면을 꾹 눌러서 한 모금';
+}
+
+// 디바운싱용
+let stateHoldFrames = 0;
+let pendingState = 'idle';
+
+function detectSound() {
+    if (!S.micActive) return;
+    if (S.done) { requestAnimationFrame(detectSound); return; }
+
+    analyser.getByteFrequencyData(freqData);
+
+    // 주파수 데이터 기반 볼륨 (게인·dB 범위가 제대로 반영됨)
+    const nyquist = audioCtx.sampleRate / 2;
+    const lowEnd = Math.floor(freqData.length * 600 / nyquist);
+    const highStart = Math.floor(freqData.length * 2000 / nyquist);
+
+    let lowE = 0, highE = 0, totalE = 0;
+    for (let i = 0; i < freqData.length; i++) {
+        totalE += freqData[i];
+        if (i < lowEnd) lowE += freqData[i];
+        if (i >= highStart) highE += freqData[i];
+    }
+
+    // 정규화된 볼륨 (0~1 범위, freqData 최대 = 255 * binCount)
+    const vol = totalE / (freqData.length * 255);
+    const lowR = totalE > 0 ? lowE / totalE : 0;
+    const highR = totalE > 0 ? highE / totalE : 0;
+
+    // 볼륨 미터
+    const volPct = Math.min(100, vol * 400);
+    $('volFill').style.width = volPct + '%';
+    $('volFill').style.background = vol > 0.03 ? 'var(--accent)' : 'var(--text-dim)';
+    $('volLabel').textContent = `vol: ${vol.toFixed(3)}`;
+    $('freqLabel').textContent = `lo:${lowR.toFixed(2)} hi:${highR.toFixed(2)}`;
+
+    // ========== 상태 판정 ==========
+    const QUIET = 0.03;   // 이 이하 = 무음
+    const LOUD = 0.12;    // 이 이상 + 저주파 = 불기(후)
+
+    let detected = 'idle';
+    if (vol > LOUD && lowR > 0.40) {
+        detected = 'exhaling';
+    } else if (vol > QUIET) {
+        detected = 'inhaling';
+    }
+
+    // 디바운싱: 같은 상태가 4프레임 연속이어야 전환 (떨림 방지)
+    if (detected === pendingState) {
+        stateHoldFrames++;
+    } else {
+        pendingState = detected;
+        stateHoldFrames = 0;
+    }
+
+    const DEBOUNCE = detected === 'idle' ? 8 : 3; // idle 전환은 좀 더 느리게
+
+    if (stateHoldFrames >= DEBOUNCE && lastMicState !== detected) {
+        // === 상태 전환 ===
+        const prevState = lastMicState;
+        lastMicState = detected;
+
+        if (detected === 'inhaling') {
+            S.micInhaling = true;
+            S.micExhaling = false;
+            S.inhaleFrames = 0;
+            ember.classList.add('glowing');
+            breathGuide.classList.add('active');
+            micBoost.classList.remove('show');
+            statusText.innerHTML = '<span class="action inhale">습—</span>';
+        } else if (detected === 'exhaling') {
+            S.micInhaling = false;
+            S.micExhaling = true;
+            ember.classList.remove('glowing');
+            breathGuide.classList.remove('active');
+            micBoost.classList.add('show');
+            statusText.innerHTML = '<span class="action exhale">후—</span>';
+        } else {
+            // idle 진입
+            // 들이쉬기 → idle 이면 자동 연기 뿜기
+            if (prevState === 'inhaling') {
+                emitSmoke(12, false);
+                statusText.innerHTML = '<span class="action exhale">후—</span>';
+                if (navigator.vibrate) navigator.vibrate(15);
+                // 잠시 후 idle 텍스트
+                setTimeout(() => {
+                    if (lastMicState === 'idle') {
+                        statusText.innerHTML = '습/후 소리를 내보세요';
+                    }
+                }, 800);
+            } else {
+                statusText.innerHTML = '습/후 소리를 내보세요';
+            }
+            S.micInhaling = false;
+            S.micExhaling = false;
+            ember.classList.remove('glowing');
+            breathGuide.classList.remove('active');
+            micBoost.classList.remove('show');
+        }
+    }
+
+    // 후— 상태일 때 연기 계속 뿜기
+    if (lastMicState === 'exhaling') {
+        emitSmoke(Math.floor(vol * 30) + 3, true);
+    }
+
+    requestAnimationFrame(detectSound);
+}
+
+// ===== NAVIGATION =====
+document.querySelectorAll('.nav-item[data-view]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        $(btn.dataset.view).classList.add('active');
+        if (btn.dataset.view === 'record-view') renderRecords();
+        if (btn.dataset.view === 'stats-view') renderStats();
+    });
+});
+
+// ===== SETTINGS =====
+$('settingsBtn').addEventListener('click', () => {
+    $('goalInput').value = S.dailyGoal;
+    $('puffsInput').value = S.maxPuffs;
+    $('settingsOverlay').classList.add('show');
+});
+$('closeSettings').addEventListener('click', closeSettings);
+$('settingsOverlay').addEventListener('click', e => {
+    if (e.target === $('settingsOverlay')) closeSettings();
+});
+function closeSettings() {
+    S.dailyGoal = parseInt($('goalInput').value) || 10;
+    S.maxPuffs = parseInt($('puffsInput').value) || 12;
+    $('maxPuffs').textContent = S.maxPuffs;
+    saveSettings();
+    $('settingsOverlay').classList.remove('show');
+}
+$('resetDataBtn').addEventListener('click', () => {
+    if (confirm('모든 흡연 기록을 삭제하시겠습니까?')) {
+        localStorage.removeItem('hanmogum_data');
+        closeSettings();
+    }
+});
+
+// ===== RECORDS =====
+function renderRecords() {
+    const data = loadData();
+    const today = todayKey();
+    const todayCount = getTodayCount();
+
+    $('todayDate').textContent = new Date().toLocaleDateString('ko-KR', {
+        year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
+    });
+    $('todayCount').textContent = todayCount;
+    $('goalText').textContent = `${todayCount} / ${S.dailyGoal}`;
+
+    const pct = Math.min(100, (todayCount / S.dailyGoal) * 100);
+    const fill = $('goalBarFill');
+    fill.style.width = pct + '%';
+    fill.className = 'goal-bar-fill' + (pct > 100 ? ' over' : '');
+
+    const list = $('recordList');
+    if (!data.records.length) {
+        list.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>아직 기록이 없습니다.<br>첫 가상 흡연을 시작해보세요.</p></div>';
+        return;
+    }
+
+    const sorted = [...data.records].sort((a, b) => b.date.localeCompare(a.date));
+    list.innerHTML = sorted.map(day => {
+        const d = new Date(day.date + 'T00:00:00');
+        const dateStr = d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', weekday: 'short' });
+        const times = day.cigarettes.map(c => c.time).join(', ');
+        const isToday = day.date === today;
+        return `<div class="record-day" style="${isToday ? 'border-left: 3px solid var(--accent);' : ''}">
+            <div class="day-info">
+                <div class="day-date">${dateStr}${isToday ? ' (오늘)' : ''}</div>
+                <div class="day-detail">${times}</div>
+            </div>
+            <div class="day-count">${day.cigarettes.length}</div>
+        </div>`;
+    }).join('');
+}
+
+// ===== STATS =====
+function renderStats() {
+    const data = loadData();
+    const records = data.records;
+    const totalDays = records.length;
+    const totalCigs = records.reduce((s, d) => s + d.cigarettes.length, 0);
+    const avgPerDay = totalDays > 0 ? (totalCigs / totalDays).toFixed(1) : 0;
+    const todayCount = getTodayCount();
+
+    let bestCount = Infinity, bestDay = '-';
+    records.forEach(r => {
+        if (r.cigarettes.length < bestCount && r.cigarettes.length > 0) {
+            bestCount = r.cigarettes.length;
+            bestDay = new Date(r.date + 'T00:00:00').toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+        }
+    });
+    if (bestCount === Infinity) { bestCount = 0; bestDay = '-'; }
+
+    $('statCards').innerHTML = `
+        <div class="stat-card highlight"><div class="stat-label">오늘</div><div class="stat-value">${todayCount}</div><div class="stat-unit">개비</div></div>
+        <div class="stat-card"><div class="stat-label">일 평균</div><div class="stat-value">${avgPerDay}</div><div class="stat-unit">개비</div></div>
+        <div class="stat-card success"><div class="stat-label">최저 기록</div><div class="stat-value">${bestCount}</div><div class="stat-unit">${bestDay}</div></div>
+        <div class="stat-card"><div class="stat-label">총 기록</div><div class="stat-value">${totalDays}</div><div class="stat-unit">일</div></div>`;
+
+    // Weekly chart
+    const bars = $('chartBars');
+    const today = new Date();
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const rec = records.find(r => r.date === key);
+        days.push({
+            label: d.toLocaleDateString('ko-KR', { weekday: 'short' }),
+            count: rec ? rec.cigarettes.length : 0,
+            isToday: i === 0
+        });
+    }
+    const maxC = Math.max(...days.map(d => d.count), 1);
+    bars.innerHTML = days.map(d => `
+        <div class="chart-bar-wrapper">
+            <div class="chart-bar-count">${d.count || ''}</div>
+            <div class="chart-bar-track"><div class="chart-bar${d.isToday ? ' today' : ''}" style="height:${(d.count/maxC)*100}%"></div></div>
+            <div class="chart-bar-label">${d.label}</div>
+        </div>`).join('');
+
+    const tips = [
+        '담배를 피우고 싶을 때 3분만 참아보세요. 흡연 충동은 대개 3-5분 내에 사라집니다.',
+        '물을 자주 마시면 흡연 욕구를 줄이는 데 도움이 됩니다.',
+        '가벼운 운동은 니코틴 갈망을 줄이는 데 효과적입니다.',
+        '금연 후 20분이면 심박수가 정상으로 돌아옵니다.',
+        '금연 1년 후 심장병 위험이 흡연자의 절반으로 줄어듭니다.',
+        '흡연 충동이 올 때 심호흡을 5번 해보세요.',
+        '가상 흡연으로 손과 입의 습관을 대체해 보세요.',
+        '금연 후 48시간이면 미각과 후각이 살아납니다.',
+    ];
+    $('tipText').textContent = tips[Math.floor(Math.random() * tips.length)];
+}
+
+// ===== INIT =====
+loadSettings();
+$('maxPuffs').textContent = S.maxPuffs;
+</script>
+</body>
+</html>
