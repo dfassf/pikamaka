@@ -1,32 +1,10 @@
-.overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.6);
-  z-index: 100;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
+.container {
+  padding: 20px;
 }
 
-.panel {
-  background: var(--bg-card);
-  width: 100%; max-width: 430px;
-  border-radius: 20px 20px 0 0;
-  padding: 24px 20px 40px;
-  max-height: 70vh;
-  overflow-y: auto;
-}
-.panel h2 {
+.container h2 {
   font-size: 18px;
   margin-bottom: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.closeBtn {
-  background: none; border: none;
-  color: var(--text-dim); font-size: 24px; cursor: pointer;
 }
 
 .item {
@@ -81,4 +59,6 @@
   color: var(--text-dim);
 }
 
-.panel button { margin-top: 20px; }
+.dangerSection {
+  margin-top: 32px;
+}

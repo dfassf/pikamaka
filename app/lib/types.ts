@@ -21,4 +21,4 @@ export interface AppSettings {
 }
 
 export type MicState = 'idle' | 'inhaling' | 'exhaling';
-export type ViewId = 'smoke' | 'record' | 'stats';
+export type ViewId = 'smoke' | 'record' | 'stats' | 'settings';

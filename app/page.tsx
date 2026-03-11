@@ -13,7 +13,6 @@ import styles from './page.module.css';
 
 export default function Home() {
   const [currentView, setCurrentView] = useState<ViewId>('smoke');
-  const [showSettings, setShowSettings] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [settings, setSettings] = useState(loadSettings);
 
@@ -31,15 +30,13 @@ export default function Home() {
         {currentView === 'smoke' && <SmokeView settings={settings} onViewRecord={() => setCurrentView('record')} />}
         {currentView === 'record' && <RecordView settings={settings} />}
         {currentView === 'stats' && <StatsView />}
+        {currentView === 'settings' && <SettingsPanel settings={settings} onSettingsChange={setSettings} />}
       </div>
 
       <BottomNav
         currentView={currentView}
         onChangeView={setCurrentView}
-        onOpenSettings={() => setShowSettings(true)}
       />
-
-      {showSettings && <SettingsPanel onClose={() => { setShowSettings(false); setSettings(loadSettings()); }} />}
       {showTutorial && (
         <Tutorial
           onClose={() => setShowTutorial(false)}

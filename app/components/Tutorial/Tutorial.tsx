@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { AppSettings } from '@/app/lib/types';
 import { markTutorialSeen } from '@/app/lib/storage';
 import Button from '@/app/components/Button/Button';
+import DatePicker from '@/app/components/DatePicker/DatePicker';
 import styles from './Tutorial.module.css';
 
 interface Props {
@@ -130,12 +131,10 @@ export default function Tutorial({ onClose, onSaveSettings }: Props) {
             </div>
             <h2>금연은 언제<br/><span>시작</span>하셨나요?</h2>
             <p className={styles.subText}>금연 일수와 성과를 추적해 드려요</p>
-            <input
-              type="date"
-              className={styles.dateInput}
+            <DatePicker
               value={quitDate}
-              onChange={e => setQuitDate(e.target.value)}
-              max={new Date().toISOString().split('T')[0]}
+              onChange={setQuitDate}
+              maxDate={new Date().toISOString().split('T')[0]}
             />
           </div>
         )}
