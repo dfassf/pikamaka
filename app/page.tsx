@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ViewId } from '@/app/lib/types';
-import { isTutorialSeen, loadSettings } from '@/app/lib/storage';
+import { ViewId, AppSettings } from '@/app/lib/types';
+import { isTutorialSeen, loadSettings, saveSettings } from '@/app/lib/storage';
 import BottomNav from '@/app/components/BottomNav/BottomNav';
 import RecordView from '@/app/components/RecordView/RecordView';
 import StatsView from '@/app/components/StatsView/StatsView';
@@ -40,7 +40,16 @@ export default function Home() {
       />
 
       {showSettings && <SettingsPanel onClose={() => { setShowSettings(false); setSettings(loadSettings()); }} />}
-      {showTutorial && <Tutorial onClose={() => setShowTutorial(false)} />}
+      {showTutorial && (
+        <Tutorial
+          onClose={() => setShowTutorial(false)}
+          onSaveSettings={(partial: Partial<AppSettings>) => {
+            const updated = { ...settings, ...partial };
+            saveSettings(updated);
+            setSettings(updated);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -52,4 +52,33 @@
 }
 .input:focus { outline: none; border-color: var(--accent); }
 
+.sectionTitle {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-top: 20px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dateInput {
+  width: 130px; padding: 8px 10px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+  -webkit-appearance: none;
+}
+.dateInput:focus { outline: none; border-color: var(--accent); }
+
+.priceWrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.unit {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
 .panel button { margin-top: 20px; }

@@ -1,5 +1,6 @@
 export const DEFAULT_MAX_PUFFS = 12;
 export const DEFAULT_DAILY_GOAL = 10;
+export const DEFAULT_PACK_SIZE = 20; // 한 갑 = 20개비 (절약 금액 계산용)
 
 // 오디오 임계값 (실측 데이터 기반 — 변경 금지)
 export const AUDIO = {
