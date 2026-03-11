@@ -1,0 +1,53 @@
+.root { gap: 16px; padding-top: 8px; display: flex; flex-direction: column; }
+
+.todaySummary {
+  background: linear-gradient(135deg, #1a1525, #1e1530);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+}
+.date { font-size: 13px; color: var(--text-dim); margin-bottom: 12px; }
+.count { font-size: 48px; font-weight: 800; color: var(--accent); line-height: 1; }
+.label { font-size: 14px; color: var(--text-dim); margin-top: 4px; }
+
+.goal {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+.goalBar {
+  flex: 1; max-width: 200px; height: 8px;
+  background: var(--border); border-radius: 4px; overflow: hidden;
+}
+.goalBarFill {
+  height: 100%; border-radius: 4px;
+  transition: width 0.5s ease;
+  background: var(--success);
+}
+.goalBarFill.over { background: var(--danger); }
+.goalText { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+
+.recordList { display: flex; flex-direction: column; gap: 8px; }
+
+.recordDay {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.recordDay.today { border-left: 3px solid var(--accent); }
+.dayInfo { display: flex; flex-direction: column; gap: 2px; }
+.dayDate { font-size: 15px; font-weight: 600; }
+.dayDetail { font-size: 12px; color: var(--text-dim); }
+.dayCount { font-size: 22px; font-weight: 700; color: var(--accent); }
+
+.empty { text-align: center; padding: 60px 20px; color: var(--text-dim); }
+.emptyIcon { font-size: 48px; margin-bottom: 16px; }
+.empty p { font-size: 14px; line-height: 1.6; }

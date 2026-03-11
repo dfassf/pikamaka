@@ -1,0 +1,42 @@
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.2s;
+  font-family: inherit;
+}
+.btn:active { opacity: 0.8; }
+
+/* size */
+.md { padding: 14px 24px; }
+.lg { padding: 16px 32px; font-size: 16px; }
+.sm { padding: 10px 16px; font-size: 13px; }
+
+/* fullWidth */
+.full { width: 100%; }
+
+/* variant */
+.primary {
+  background: var(--accent);
+  color: #fff;
+}
+.secondary {
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.ghost {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+.danger {
+  background: var(--danger);
+  color: #fff;
+}
