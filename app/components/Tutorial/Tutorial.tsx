@@ -71,7 +71,7 @@ export default function Tutorial({ onClose, onSaveSettings }: Props) {
         {/* 스텝 0: 사용법 */}
         {step === 0 && (
           <div className={styles.stepContent}>
-            <h2><span>한 모금</span> 사용법</h2>
+            <h2><span>필까말까</span> 사용법</h2>
             <div className={styles.section}>
               <div className={styles.icon}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

@@ -44,32 +44,32 @@ export default function SettingsPanel({ settings, onSettingsChange }: Props) {
       <h2>설정</h2>
 
       <div className={styles.item}>
-        <div className={styles.label}>
-          하루 목표
-          <small>하루 최대 개비 수</small>
+        <div className={styles.label}>하루 목표</div>
+        <div className={styles.inputWrap}>
+          <input
+            type="number"
+            className={styles.input}
+            min={1} max={50}
+            value={dailyGoal}
+            onChange={e => { setDailyGoal(parseInt(e.target.value) || 0); }}
+            onBlur={() => save()}
+          />
+          <span className={styles.unit}>개비</span>
         </div>
-        <input
-          type="number"
-          className={styles.input}
-          min={1} max={50}
-          value={dailyGoal}
-          onChange={e => { setDailyGoal(parseInt(e.target.value) || 0); }}
-          onBlur={() => save()}
-        />
       </div>
       <div className={styles.item}>
-        <div className={styles.label}>
-          한 개비 퍼프 수
-          <small>한 개비에 필요한 퍼프</small>
+        <div className={styles.label}>한 개비 모금 수</div>
+        <div className={styles.inputWrap}>
+          <input
+            type="number"
+            className={styles.input}
+            min={3} max={30}
+            value={maxPuffs}
+            onChange={e => { setMaxPuffs(parseInt(e.target.value) || 0); }}
+            onBlur={() => save()}
+          />
+          <span className={styles.unit}>모금</span>
         </div>
-        <input
-          type="number"
-          className={styles.input}
-          min={3} max={30}
-          value={maxPuffs}
-          onChange={e => { setMaxPuffs(parseInt(e.target.value) || 0); }}
-          onBlur={() => save()}
-        />
       </div>
 
       <div className={styles.sectionTitle}>금연 정보</div>
@@ -83,26 +83,23 @@ export default function SettingsPanel({ settings, onSettingsChange }: Props) {
         maxDate={new Date().toISOString().split('T')[0]}
       />
       <div className={styles.item}>
-        <div className={styles.label}>
-          이전 하루 흡연량
-          <small>금연 전 하루 개비 수</small>
+        <div className={styles.label}>이전 하루 흡연량</div>
+        <div className={styles.inputWrap}>
+          <input
+            type="number"
+            className={styles.input}
+            min={1} max={99}
+            placeholder="10"
+            value={prevDailyAmount}
+            onChange={e => setPrevDailyAmount(e.target.value)}
+            onBlur={() => save()}
+          />
+          <span className={styles.unit}>개비</span>
         </div>
-        <input
-          type="number"
-          className={styles.input}
-          min={1} max={99}
-          placeholder="10"
-          value={prevDailyAmount}
-          onChange={e => setPrevDailyAmount(e.target.value)}
-          onBlur={() => save()}
-        />
       </div>
       <div className={styles.item}>
-        <div className={styles.label}>
-          한 갑 가격
-          <small>절약 금액 계산용</small>
-        </div>
-        <div className={styles.priceWrap}>
+        <div className={styles.label}>한 갑 가격</div>
+        <div className={styles.inputWrap}>
           <input
             type="number"
             className={styles.input}

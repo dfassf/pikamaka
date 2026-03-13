@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ViewId, AppSettings } from '@/app/lib/types';
 import { isTutorialSeen, loadSettings, saveSettings } from '@/app/lib/storage';
 import BottomNav from '@/app/components/BottomNav/BottomNav';
@@ -15,19 +15,27 @@ export default function Home() {
   const [currentView, setCurrentView] = useState<ViewId>('smoke');
   const [showTutorial, setShowTutorial] = useState(false);
   const [settings, setSettings] = useState(loadSettings);
+  const beforeLeaveRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!isTutorialSeen()) setShowTutorial(true);
   }, []);
 
+  function handleViewChange(view: ViewId) {
+    if (currentView === 'smoke' && view !== 'smoke') {
+      beforeLeaveRef.current?.();
+    }
+    setCurrentView(view);
+  }
+
   return (
     <div className={styles.app}>
       <header className={styles.header}>
-        <h1 className={styles.title}><span>한 모금</span></h1>
+        <h1 className={styles.title}><span>필까말까</span></h1>
       </header>
 
       <div className={styles.view}>
-        {currentView === 'smoke' && <SmokeView settings={settings} onViewRecord={() => setCurrentView('record')} />}
+        {currentView === 'smoke' && <SmokeView settings={settings} onViewRecord={() => handleViewChange('record')} beforeLeaveRef={beforeLeaveRef} />}
         {currentView === 'record' && <RecordView settings={settings} />}
         {currentView === 'stats' && <StatsView />}
         {currentView === 'settings' && <SettingsPanel settings={settings} onSettingsChange={setSettings} />}
@@ -35,7 +43,7 @@ export default function Home() {
 
       <BottomNav
         currentView={currentView}
-        onChangeView={setCurrentView}
+        onChangeView={handleViewChange}
       />
       {showTutorial && (
         <Tutorial

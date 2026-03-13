@@ -1,6 +1,16 @@
 export const DEFAULT_MAX_PUFFS = 12;
 export const DEFAULT_DAILY_GOAL = 10;
 export const DEFAULT_PACK_SIZE = 20; // 한 갑 = 20개비 (절약 금액 계산용)
+export const DEFAULT_PACK_PRICE = 4500; // 한 갑 기본 가격 (원)
+
+export const STORAGE_KEYS = {
+  DATA: 'hanmogum_data',
+  SETTINGS: 'hanmogum_settings',
+  TUTORIAL_SEEN: 'hanmogum_tutorial_seen',
+} as const;
+
+export const PUFF_MS = 1500;           // 터치 1모금 시간(ms)
+export const EXHALE_DISPLAY_MS = 1200; // 내쉬기 텍스트 표시 시간(ms)
 
 // 오디오 임계값 (실측 데이터 기반 — 변경 금지)
 export const AUDIO = {

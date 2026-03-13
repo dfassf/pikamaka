@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { loadData, getTodayCount } from '@/app/lib/storage';
+import { loadData, getTodayCount, formatDateKey } from '@/app/lib/storage';
 import { TIPS } from '@/app/lib/constants';
 import styles from './StatsView.module.css';
 
@@ -31,7 +31,7 @@ export default function StatsView() {
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const key = formatDateKey(d);
       const rec = records.find(r => r.date === key);
       days.push({
         label: d.toLocaleDateString('ko-KR', { weekday: 'short' }),

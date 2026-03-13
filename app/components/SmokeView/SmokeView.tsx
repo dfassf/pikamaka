@@ -2,16 +2,22 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { AppSettings, MicState } from '@/app/lib/types';
+import { EXHALE_DISPLAY_MS } from '@/app/lib/constants';
+import { addRecord, getTodayCount } from '@/app/lib/storage';
 import useSmokeCanvas from '@/app/hooks/useSmokeCanvas';
 import useAudio from '@/app/hooks/useAudio';
-import useCigarette, { StatusType } from '@/app/hooks/useCigarette';
+import useCigarette from '@/app/hooks/useCigarette';
+import useTouchPuff from '@/app/hooks/useTouchPuff';
 import Cigarette from './Cigarette';
 import DoneOverlay from './DoneOverlay';
 import styles from './SmokeView.module.css';
 
+type StatusType = 'idle' | 'micReady' | 'inhaling' | 'micInhaling' | 'exhaling';
+
 interface Props {
   settings: AppSettings;
   onViewRecord: () => void;
+  beforeLeaveRef: React.MutableRefObject<(() => void) | null>;
 }
 
 const STATUS_TEXT: Record<StatusType, string> = {
@@ -22,7 +28,7 @@ const STATUS_TEXT: Record<StatusType, string> = {
   exhaling: '후—',
 };
 
-export default function SmokeView({ settings, onViewRecord }: Props) {
+export default function SmokeView({ settings, onViewRecord, beforeLeaveRef }: Props) {
   const [status, setStatus] = useState<StatusType>('idle');
   const [glowing, setGlowing] = useState(false);
   const [breathActive, setBreathActive] = useState(false);
@@ -31,11 +37,9 @@ export default function SmokeView({ settings, onViewRecord }: Props) {
   const [volPct, setVolPct] = useState(0);
   const [volActive, setVolActive] = useState(false);
   const [showBoost, setShowBoost] = useState(false);
+  const [doneMessage, setDoneMessage] = useState('');
 
   const emberRef = useRef<HTMLDivElement>(null);
-  const pressingRef = useRef(false);
-  const inhaleStartRef = useRef(0);
-  const rafPuffId = useRef<number>(0);
   const micActiveRef = useRef(false);
   const micInhalingRef = useRef(false);
   const exhalingRef = useRef(false);
@@ -44,7 +48,39 @@ export default function SmokeView({ settings, onViewRecord }: Props) {
   const { startMic, stopMic } = useAudio();
   const cig = useCigarette(settings);
 
-  // 비주얼 초기화 헬퍼
+  // --- 완료 처리 (저장 + 진동 + 메시지) ---
+  const handleComplete = useCallback(() => {
+    addRecord(cig.puffsRef.current);
+    const todayCount = getTodayCount();
+    if (todayCount <= settings.dailyGoal) {
+      setDoneMessage(`오늘 ${todayCount}개비째입니다.\n진짜 담배 대신 이걸로 충분해요.`);
+    } else {
+      setDoneMessage(`오늘 ${todayCount}개비 — 목표(${settings.dailyGoal})를 넘었어요.\n조금만 줄여볼까요?`);
+    }
+    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+  }, [settings.dailyGoal, cig.puffsRef]);
+
+  // 모금 등록 + 완료 시 부가 처리
+  const doPuff = useCallback(() => {
+    const completed = cig.registerPuff();
+    if (navigator.vibrate) navigator.vibrate(10);
+    if (completed) handleComplete();
+  }, [cig, handleComplete]);
+
+  // --- 터치 입력 ---
+  const touch = useTouchPuff({
+    onPuff: doPuff,
+    onSpark: emitSparks,
+    isDone: () => cig.doneRef.current,
+  });
+
+  // 탭 이동 시 진행 중인 모금 자동 저장
+  beforeLeaveRef.current = () => {
+    if (cig.puffsRef.current > 0 && !cig.doneRef.current) {
+      addRecord(cig.puffsRef.current);
+    }
+  };
+
   const setVisual = useCallback((g: boolean, b: boolean) => {
     setGlowing(g);
     setBreathActive(b);
@@ -57,74 +93,52 @@ export default function SmokeView({ settings, onViewRecord }: Props) {
   // 새 담배
   const handleReset = useCallback(() => {
     cig.reset();
-    inhaleStartRef.current = 0;
     setVisual(false, false);
     setShowBoost(false);
+    setDoneMessage('');
     setStatus(defaultStatus());
     clearParticles();
   }, [cig, clearParticles, setVisual, defaultStatus]);
 
-  // --- 터치 입력 (시간 기반 — 120Hz에서도 동일 속도) ---
-  const PUFF_MS = 2000; // 1퍼프에 2초
-
-  const startPuffLoop = useCallback(() => {
-    let puffStart = performance.now();
-    function tick() {
-      if (!pressingRef.current || cig.doneRef.current) return;
-      emitSparks();
-      const elapsed = performance.now() - puffStart;
-      if (elapsed >= PUFF_MS) {
-        cig.registerPuff();
-        puffStart = performance.now();
-      }
-      rafPuffId.current = requestAnimationFrame(tick);
-    }
-    rafPuffId.current = requestAnimationFrame(tick);
-  }, [emitSparks, cig]);
-
+  // --- 터치 이벤트 핸들러 ---
   const startInhale = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (cig.doneRef.current) return;
     e.preventDefault();
     if (hintVisible) setHintVisible(false);
-    pressingRef.current = true;
-    inhaleStartRef.current = performance.now();
     setVisual(true, true);
     setStatus('inhaling');
     if (navigator.vibrate) navigator.vibrate(30);
-    startPuffLoop();
-  }, [hintVisible, startPuffLoop, cig.doneRef, setVisual]);
+    touch.startInhale();
+  }, [hintVisible, touch, cig.doneRef, setVisual]);
 
   const endInhale = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    if (!pressingRef.current) return;
     e.preventDefault();
-    pressingRef.current = false;
-    cancelAnimationFrame(rafPuffId.current);
+    const inhaleMs = touch.endInhale();
+    if (inhaleMs === 0) return;
     setVisual(false, false);
     if (cig.doneRef.current) return;
 
     setStatus('exhaling');
-    const inhaleMs = performance.now() - inhaleStartRef.current;
     const count = Math.min(Math.floor(inhaleMs / 60) + 3, 20);
     emitSmoke(count, false, true);
     if (navigator.vibrate) navigator.vibrate(15);
 
     setTimeout(() => {
-      if (!pressingRef.current && !micInhalingRef.current && !cig.doneRef.current) {
+      if (!touch.pressingRef.current && !micInhalingRef.current && !cig.doneRef.current) {
         setStatus(defaultStatus());
       }
-    }, 1200);
-  }, [emitSmoke, cig.doneRef, setVisual, defaultStatus]);
+    }, EXHALE_DISPLAY_MS);
+  }, [emitSmoke, touch, cig.doneRef, setVisual, defaultStatus]);
 
   // --- 마이크 콜백 ---
   const handleMicStateChange = useCallback((state: MicState, prevState: MicState) => {
     if (state === 'inhaling') {
       micInhalingRef.current = true;
-      inhaleStartRef.current = performance.now();
       setVisual(true, true);
       setShowBoost(false);
       setStatus('micInhaling');
     } else if (state === 'exhaling') {
-      if (prevState === 'inhaling') cig.registerPuff();
+      if (prevState === 'inhaling') doPuff();
       micInhalingRef.current = false;
       exhalingRef.current = true;
       setVisual(false, false);
@@ -132,7 +146,7 @@ export default function SmokeView({ settings, onViewRecord }: Props) {
       setStatus('exhaling');
     } else {
       if (prevState === 'inhaling') {
-        cig.registerPuff();
+        doPuff();
         emitSmoke(12, false, true);
         setStatus('exhaling');
         if (navigator.vibrate) navigator.vibrate(15);
@@ -145,7 +159,7 @@ export default function SmokeView({ settings, onViewRecord }: Props) {
       setVisual(false, false);
       setShowBoost(false);
     }
-  }, [cig, emitSmoke, setVisual]);
+  }, [doPuff, emitSmoke, setVisual]);
 
   const handleMicVolume = useCallback((rms: number, isQuiet: boolean) => {
     setVolPct(Math.min(100, rms * 2000));
@@ -164,7 +178,7 @@ export default function SmokeView({ settings, onViewRecord }: Props) {
       setMicActive(false);
       setShowBoost(false);
       setVisual(false, false);
-      if (!pressingRef.current) setStatus('idle');
+      if (!touch.pressingRef.current) setStatus('idle');
       return;
     }
     try {
@@ -176,7 +190,7 @@ export default function SmokeView({ settings, onViewRecord }: Props) {
     } catch {
       alert('마이크 권한이 필요합니다.');
     }
-  }, [startMic, stopMic, handleMicStateChange, handleMicVolume, cig.doneRef, setVisual]);
+  }, [startMic, stopMic, handleMicStateChange, handleMicVolume, cig.doneRef, setVisual, touch.pressingRef]);
 
   // --- 상태 텍스트 렌더링 ---
   const isAction = status === 'inhaling' || status === 'micInhaling';
@@ -221,7 +235,7 @@ export default function SmokeView({ settings, onViewRecord }: Props) {
 
         <div className={styles.statusArea}>
           <div className={styles.statusText}>{statusEl}</div>
-          <div className={styles.puffCounter}>퍼프 <strong>{cig.puffs}</strong> / {settings.maxPuffs}</div>
+          <div className={styles.puffCounter}>모금 <strong>{cig.puffs}</strong> / {settings.maxPuffs}</div>
         </div>
 
         {hintVisible && (
@@ -236,7 +250,7 @@ export default function SmokeView({ settings, onViewRecord }: Props) {
         )}
       </div>
 
-      {cig.done && <DoneOverlay message={cig.doneMessage} onNewCig={handleReset} onViewRecord={onViewRecord} />}
+      {cig.done && <DoneOverlay message={doneMessage} onNewCig={handleReset} onViewRecord={onViewRecord} />}
     </div>
   );
 }

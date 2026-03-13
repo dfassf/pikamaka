@@ -1,37 +1,43 @@
-import { AppData, AppSettings, DayRecord } from './types';
-import { DEFAULT_MAX_PUFFS, DEFAULT_DAILY_GOAL } from './constants';
+import { AppData, AppSettings } from './types';
+import { DEFAULT_MAX_PUFFS, DEFAULT_DAILY_GOAL, DEFAULT_PACK_PRICE, STORAGE_KEYS } from './constants';
+
+export function formatDateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 export function todayKey(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return formatDateKey(new Date());
 }
 
 export function loadData(): AppData {
   try {
-    return JSON.parse(localStorage.getItem('hanmogum_data') || '') || { records: [] };
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.DATA) || '') || { records: [] };
   } catch {
     return { records: [] };
   }
 }
 
 export function saveData(data: AppData): void {
-  localStorage.setItem('hanmogum_data', JSON.stringify(data));
+  localStorage.setItem(STORAGE_KEYS.DATA, JSON.stringify(data));
 }
 
 export function loadSettings(): AppSettings {
   try {
-    const s = JSON.parse(localStorage.getItem('hanmogum_settings') || '');
+    const s = JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS) || '');
     return {
       maxPuffs: s?.maxPuffs || DEFAULT_MAX_PUFFS,
       dailyGoal: s?.dailyGoal || DEFAULT_DAILY_GOAL,
+      quitDate: s?.quitDate,
+      prevDailyAmount: s?.prevDailyAmount,
+      packPrice: s?.packPrice ?? DEFAULT_PACK_PRICE,
     };
   } catch {
-    return { maxPuffs: DEFAULT_MAX_PUFFS, dailyGoal: DEFAULT_DAILY_GOAL };
+    return { maxPuffs: DEFAULT_MAX_PUFFS, dailyGoal: DEFAULT_DAILY_GOAL, packPrice: DEFAULT_PACK_PRICE };
   }
 }
 
 export function saveSettings(settings: AppSettings): void {
-  localStorage.setItem('hanmogum_settings', JSON.stringify(settings));
+  localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
 }
 
 export function addRecord(puffs: number): void {
@@ -56,9 +62,9 @@ export function getTodayCount(): number {
 }
 
 export function isTutorialSeen(): boolean {
-  return !!localStorage.getItem('hanmogum_tutorial_seen');
+  return !!localStorage.getItem(STORAGE_KEYS.TUTORIAL_SEEN);
 }
 
 export function markTutorialSeen(): void {
-  localStorage.setItem('hanmogum_tutorial_seen', '1');
+  localStorage.setItem(STORAGE_KEYS.TUTORIAL_SEEN, '1');
 }
