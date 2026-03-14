@@ -13,28 +13,30 @@ export default function useTouchPuff({ onPuff, onSpark, isDone }: UseTouchPuffOp
   const pressingRef = useRef(false);
   const inhaleStartRef = useRef(0);
   const rafPuffId = useRef<number>(0);
+  const callbacksRef = useRef({ onPuff, onSpark, isDone });
+  callbacksRef.current = { onPuff, onSpark, isDone };
 
   const startPuffLoop = useCallback(() => {
     let puffStart = performance.now();
     function tick() {
-      if (!pressingRef.current || isDone()) return;
-      onSpark();
+      if (!pressingRef.current || callbacksRef.current.isDone()) return;
+      callbacksRef.current.onSpark();
       const elapsed = performance.now() - puffStart;
       if (elapsed >= PUFF_MS) {
-        onPuff();
+        callbacksRef.current.onPuff();
         puffStart = performance.now();
       }
       rafPuffId.current = requestAnimationFrame(tick);
     }
     rafPuffId.current = requestAnimationFrame(tick);
-  }, [onPuff, onSpark, isDone]);
+  }, []);
 
   const startInhale = useCallback(() => {
-    if (isDone()) return;
+    if (callbacksRef.current.isDone()) return;
     pressingRef.current = true;
     inhaleStartRef.current = performance.now();
     startPuffLoop();
-  }, [isDone, startPuffLoop]);
+  }, [startPuffLoop]);
 
   /** 들이쉰 시간(ms) 리턴 */
   const endInhale = useCallback((): number => {
