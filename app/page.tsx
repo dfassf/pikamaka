@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { ViewId, AppSettings } from '@/app/lib/types';
 import { isTutorialSeen, loadSettings, saveSettings } from '@/app/lib/storage';
 import BottomNav from '@/app/components/BottomNav/BottomNav';
@@ -13,15 +13,11 @@ import styles from './page.module.css';
 
 export default function Home() {
   const [currentView, setCurrentView] = useState<ViewId>('smoke');
-  const [showTutorial, setShowTutorial] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(() => !isTutorialSeen());
   const [guideOnly, setGuideOnly] = useState(false);
   const [showMicTip, setShowMicTip] = useState(false);
   const [settings, setSettings] = useState(loadSettings);
   const beforeLeaveRef = useRef<(() => void) | null>(null);
-
-  useEffect(() => {
-    if (!isTutorialSeen()) setShowTutorial(true);
-  }, []);
 
   function handleViewChange(view: ViewId) {
     if (currentView === 'smoke' && view !== 'smoke') {

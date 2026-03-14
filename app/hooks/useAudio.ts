@@ -47,10 +47,10 @@ export default function useAudio() {
   }, []);
 
   // 감지 루프
-  const detectSound = useCallback((doneRef: React.RefObject<boolean>) => {
+  const detectSound = useCallback(function loop(doneRef: React.RefObject<boolean>) {
     if (!activeRef.current) return;
     if (doneRef.current) {
-      requestAnimationFrame(() => detectSound(doneRef));
+      requestAnimationFrame(() => loop(doneRef));
       return;
     }
 
@@ -120,7 +120,7 @@ export default function useAudio() {
     // 후— 상태일 때 연기 계속 (콜백에서 처리하도록 rms 전달)
     // → onVolume에서 처리
 
-    requestAnimationFrame(() => detectSound(doneRef));
+    requestAnimationFrame(() => loop(doneRef));
   }, [getRMS, updateNoiseFloor]);
 
   // 마이크 시작

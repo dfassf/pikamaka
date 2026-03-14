@@ -8,6 +8,7 @@ import { isIntossRuntime } from '@/app/lib/intoss';
 import styles from './StatsView.module.css';
 
 const PACK_SIZE = 20;
+const LOCKED_PREVIEW_BAR_HEIGHTS = [42, 64, 36, 58, 47, 70, 40] as const;
 
 interface Props {
   settings: AppSettings;
@@ -94,11 +95,14 @@ export default function StatsView({ settings }: Props) {
             <div className={styles.weeklyChart}>
               <h3>주간 흡연량</h3>
               <div className={styles.chartBars}>
-                {['일','월','화','수','목','금','토'].map(d => (
+                {['일','월','화','수','목','금','토'].map((d, idx) => (
                   <div key={d} className={styles.barWrapper}>
                     <div className={styles.barCount} />
                     <div className={styles.barTrack}>
-                      <div className={styles.bar} style={{ height: `${20 + Math.random() * 60}%` }} />
+                      <div
+                        className={styles.bar}
+                        style={{ height: `${LOCKED_PREVIEW_BAR_HEIGHTS[idx]}%` }}
+                      />
                     </div>
                     <div className={styles.barLabel}>{d}</div>
                   </div>

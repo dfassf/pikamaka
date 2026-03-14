@@ -13,8 +13,11 @@ interface Props {
 export default function RecordView({ settings }: Props) {
   const data = useMemo(() => loadData(), []);
   const todayCount = getTodayCount();
-  const tip = useMemo(() => TIPS[Math.floor(Math.random() * TIPS.length)], []);
   const today = todayKey();
+  const tip = useMemo(() => {
+    const seed = Number(today.replace(/-/g, '')) || 0;
+    return TIPS[seed % TIPS.length];
+  }, [today]);
 
   const pct = Math.min(100, (todayCount / settings.dailyGoal) * 100);
   const sorted = [...data.records].sort((a, b) => b.date.localeCompare(a.date));

@@ -18,7 +18,11 @@ export function loadData(): AppData {
 }
 
 export function saveData(data: AppData): void {
-  localStorage.setItem(STORAGE_KEYS.DATA, JSON.stringify(data));
+  try {
+    localStorage.setItem(STORAGE_KEYS.DATA, JSON.stringify(data));
+  } catch {
+    // localStorage 차단/쿼터 초과 환경
+  }
 }
 
 export function loadSettings(): AppSettings {
@@ -37,7 +41,11 @@ export function loadSettings(): AppSettings {
 }
 
 export function saveSettings(settings: AppSettings): void {
-  localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+  try {
+    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+  } catch {
+    // localStorage 차단/쿼터 초과 환경
+  }
 }
 
 export function addRecord(): void {
@@ -61,11 +69,19 @@ export function getTodayCount(): number {
 }
 
 export function isTutorialSeen(): boolean {
-  return !!localStorage.getItem(STORAGE_KEYS.TUTORIAL_SEEN);
+  try {
+    return !!localStorage.getItem(STORAGE_KEYS.TUTORIAL_SEEN);
+  } catch {
+    return false;
+  }
 }
 
 export function markTutorialSeen(): void {
-  localStorage.setItem(STORAGE_KEYS.TUTORIAL_SEEN, '1');
+  try {
+    localStorage.setItem(STORAGE_KEYS.TUTORIAL_SEEN, '1');
+  } catch {
+    // localStorage 차단/쿼터 초과 환경
+  }
 }
 
 export function isStatsUnlocked(): boolean {

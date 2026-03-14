@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import { PUFF_MS } from '@/app/lib/constants';
 
 interface UseTouchPuffOptions {
@@ -14,7 +14,10 @@ export default function useTouchPuff({ onPuff, onSpark, isDone }: UseTouchPuffOp
   const inhaleStartRef = useRef(0);
   const rafPuffId = useRef<number>(0);
   const callbacksRef = useRef({ onPuff, onSpark, isDone });
-  callbacksRef.current = { onPuff, onSpark, isDone };
+
+  useEffect(() => {
+    callbacksRef.current = { onPuff, onSpark, isDone };
+  }, [onPuff, onSpark, isDone]);
 
   const startPuffLoop = useCallback(() => {
     let puffStart = performance.now();
