@@ -42,7 +42,7 @@
   align-items: center;
   justify-content: space-between;
 }
-.recordDay.today { border-left: 3px solid var(--accent); }
+.recordDay.today { }
 .dayInfo { display: flex; flex-direction: column; gap: 2px; }
 .dayDate { font-size: 15px; font-weight: 600; }
 .dayDetail { font-size: 12px; color: var(--text-dim); }

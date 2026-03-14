@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { AppSettings, MicState } from '@/app/lib/types';
 import { EXHALE_DISPLAY_MS } from '@/app/lib/constants';
 import { addRecord, getTodayCount } from '@/app/lib/storage';
@@ -18,6 +18,8 @@ interface Props {
   settings: AppSettings;
   onViewRecord: () => void;
   beforeLeaveRef: React.MutableRefObject<(() => void) | null>;
+  showMicTip?: boolean;
+  onMicTipDismiss?: () => void;
 }
 
 const STATUS_TEXT: Record<StatusType, string> = {
@@ -28,7 +30,7 @@ const STATUS_TEXT: Record<StatusType, string> = {
   exhaling: '후—',
 };
 
-export default function SmokeView({ settings, onViewRecord, beforeLeaveRef }: Props) {
+export default function SmokeView({ settings, onViewRecord, beforeLeaveRef, showMicTip, onMicTipDismiss }: Props) {
   const [status, setStatus] = useState<StatusType>('idle');
   const [inhaling, setInhaling] = useState(false);
   const [hintVisible, setHintVisible] = useState(true);
@@ -42,6 +44,16 @@ export default function SmokeView({ settings, onViewRecord, beforeLeaveRef }: Pr
   const micActiveRef = useRef(false);
   const micInhalingRef = useRef(false);
   const exhalingRef = useRef(false);
+
+  // 마이크 팁 Escape 닫기
+  useEffect(() => {
+    if (!showMicTip) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onMicTipDismiss?.();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [showMicTip, onMicTipDismiss]);
 
   const { canvasRef, emitSmoke, emitSparks, clearParticles } = useSmokeCanvas({ emberRef });
   const { startMic, stopMic } = useAudio();
@@ -97,6 +109,12 @@ export default function SmokeView({ settings, onViewRecord, beforeLeaveRef }: Pr
     setStatus(defaultStatus());
     clearParticles();
   }, [cig, clearParticles, defaultStatus]);
+
+  // 담배 버리기 (진행 중인 담배를 버리고 1개비 카운트)
+  const handleDiscard = useCallback(() => {
+    addRecord();
+    handleReset();
+  }, [handleReset]);
 
   // --- 터치 이벤트 핸들러 ---
   const startInhale = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -234,6 +252,15 @@ export default function SmokeView({ settings, onViewRecord, beforeLeaveRef }: Pr
         <div className={styles.statusArea}>
           <div className={styles.statusText}>{statusEl}</div>
           <div className={styles.puffCounter}>모금 <strong>{cig.puffs}</strong> / {settings.maxPuffs}</div>
+          {cig.puffs > 0 && !cig.done && (
+            <button className={styles.discardButton} onPointerDown={e => e.stopPropagation()} onClick={handleDiscard} title="담배 버리기">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+              버리기
+            </button>
+          )}
         </div>
 
         {hintVisible && (
@@ -249,6 +276,24 @@ export default function SmokeView({ settings, onViewRecord, beforeLeaveRef }: Pr
       </div>
 
       {cig.done && <DoneOverlay message={doneMessage} onNewCig={handleReset} onViewRecord={onViewRecord} />}
+
+      {showMicTip && (
+        <div className={styles.micTipOverlay} role="dialog" aria-modal="true" aria-labelledby="mic-tip-title" onClick={onMicTipDismiss}>
+          <div className={styles.micTipSpotlight} />
+          <div className={styles.micTipTooltip} onClick={e => e.stopPropagation()}>
+            <div className={styles.micTipArrow} />
+            <h3 id="mic-tip-title">마이크로 피우기</h3>
+            <p>
+              마이크 권한을 허용하면<br/>
+              <strong>&ldquo;습&rdquo;</strong> 소리로 들이쉬고<br/>
+              <strong>&ldquo;후&rdquo;</strong> 소리로 내쉴 수 있어요
+            </p>
+            <button className={styles.micTipButton} onClick={onMicTipDismiss} autoFocus>
+              확인
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

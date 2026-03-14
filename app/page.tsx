@@ -14,6 +14,7 @@ import styles from './page.module.css';
 export default function Home() {
   const [currentView, setCurrentView] = useState<ViewId>('smoke');
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showMicTip, setShowMicTip] = useState(false);
   const [settings, setSettings] = useState(loadSettings);
   const beforeLeaveRef = useRef<(() => void) | null>(null);
 
@@ -35,7 +36,7 @@ export default function Home() {
       </header>
 
       <div className={styles.view}>
-        {currentView === 'smoke' && <SmokeView settings={settings} onViewRecord={() => handleViewChange('record')} beforeLeaveRef={beforeLeaveRef} />}
+        {currentView === 'smoke' && <SmokeView settings={settings} onViewRecord={() => handleViewChange('record')} beforeLeaveRef={beforeLeaveRef} showMicTip={showMicTip} onMicTipDismiss={() => setShowMicTip(false)} />}
         {currentView === 'record' && <RecordView settings={settings} />}
         {currentView === 'stats' && <StatsView settings={settings} />}
         {currentView === 'settings' && <SettingsPanel settings={settings} onSettingsChange={setSettings} />}
@@ -47,7 +48,7 @@ export default function Home() {
       />
       {showTutorial && (
         <Tutorial
-          onClose={() => setShowTutorial(false)}
+          onClose={() => { setShowTutorial(false); setShowMicTip(true); }}
           onSaveSettings={(partial: Partial<AppSettings>) => {
             const updated = { ...settings, ...partial };
             saveSettings(updated);

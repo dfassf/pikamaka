@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { AppSettings } from '@/app/lib/types';
 import { markTutorialSeen } from '@/app/lib/storage';
 import Button from '@/app/components/Button/Button';
@@ -21,8 +21,8 @@ export default function Tutorial({ onClose, onSaveSettings }: Props) {
   // 스텝 3: 금연 시작일
   const [quitDate, setQuitDate] = useState('');
   // 스텝 4: 흡연량 + 갑 가격
-  const [prevAmount, setPrevAmount] = useState('');
-  const [packPrice, setPackPrice] = useState('');
+  const [prevAmount, setPrevAmount] = useState('10');
+  const [packPrice, setPackPrice] = useState('4500');
 
   function finish() {
     setClosing(true);
@@ -55,12 +55,24 @@ export default function Tutorial({ onClose, onSaveSettings }: Props) {
     setStep(s => s + 1);
   }
 
+  // 스와이프
+  const touchStartX = useRef(0);
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX;
+  }
+  function handleTouchEnd(e: React.TouchEvent) {
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(dx) < 50) return;
+    if (dx < 0) next();          // 왼쪽 스와이프 → 다음
+    else if (step > 0) setStep(s => s - 1); // 오른쪽 스와이프 → 이전
+  }
+
   const isLast = step === TOTAL_STEPS - 1;
   const showSkip = step >= 2;
 
   return (
     <div className={`${styles.overlay} ${closing ? styles.closing : ''}`}>
-      <div className={styles.card}>
+      <div className={styles.card} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
         {/* 스텝 인디케이터 */}
         <div className={styles.dots}>
           {Array.from({ length: TOTAL_STEPS }, (_, i) => (

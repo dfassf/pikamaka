@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { AppSettings } from '@/app/lib/types';
 import { loadData, getTodayCount, formatDateKey, isStatsUnlocked, unlockStats } from '@/app/lib/storage';
 import { QUIT_MILESTONES } from '@/app/lib/constants';
+import { isIntossRuntime } from '@/app/lib/intoss';
 import styles from './StatsView.module.css';
 
 const PACK_SIZE = 20;
@@ -12,13 +13,8 @@ interface Props {
   settings: AppSettings;
 }
 
-// TODO: 앱 환경(App-in-Toss 등) 감지 시 true 반환하도록 변경
-function isAppEnvironment(): boolean {
-  return false;
-}
-
 export default function StatsView({ settings }: Props) {
-  const [locked, setLocked] = useState(() => isAppEnvironment() && !isStatsUnlocked());
+  const [locked, setLocked] = useState(() => isIntossRuntime() && !isStatsUnlocked());
 
   const handleUnlock = useCallback(() => {
     // TODO: 광고 SDK 연동 시 여기서 loadAndShowRewarded() 호출
@@ -123,7 +119,7 @@ export default function StatsView({ settings }: Props) {
           </div>
           <div className={styles.lockedOverlay}>
             <button className={styles.unlockButton} onClick={handleUnlock}>
-              통계 보기
+              광고 보고 통계 보기
             </button>
           </div>
         </div>
