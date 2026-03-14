@@ -10,11 +10,14 @@ import styles from './Tutorial.module.css';
 interface Props {
   onClose: () => void;
   onSaveSettings: (partial: Partial<AppSettings>) => void;
+  guideOnly?: boolean;
 }
 
-const TOTAL_STEPS = 4;
+const FULL_STEPS = 4;
+const GUIDE_STEPS = 2;
 
-export default function Tutorial({ onClose, onSaveSettings }: Props) {
+export default function Tutorial({ onClose, onSaveSettings, guideOnly }: Props) {
+  const totalSteps = guideOnly ? GUIDE_STEPS : FULL_STEPS;
   const [step, setStep] = useState(0);
   const [closing, setClosing] = useState(false);
 
@@ -26,29 +29,32 @@ export default function Tutorial({ onClose, onSaveSettings }: Props) {
 
   function finish() {
     setClosing(true);
-    markTutorialSeen();
+    if (!guideOnly) markTutorialSeen();
     setTimeout(onClose, 250);
   }
 
   function next() {
-    // 스텝 3에서 "다음" → 금연 시작일 저장
-    if (step === 2 && quitDate) {
-      onSaveSettings({ quitDate });
-    }
-    // 스텝 4에서 "시작하기" → 흡연량 + 가격 저장
-    if (step === 3) {
-      const partial: Partial<AppSettings> = {};
-      if (prevAmount) partial.prevDailyAmount = Number(prevAmount);
-      if (packPrice) partial.packPrice = Number(packPrice);
-      if (Object.keys(partial).length > 0) onSaveSettings(partial);
+    // 가이드 모드: 마지막 스텝에서 바로 닫기
+    if (step === totalSteps - 1) {
+      if (!guideOnly) {
+        // 스텝 4에서 "시작하기" → 흡연량 + 가격 저장
+        const partial: Partial<AppSettings> = {};
+        if (prevAmount) partial.prevDailyAmount = Number(prevAmount);
+        if (packPrice) partial.packPrice = Number(packPrice);
+        if (Object.keys(partial).length > 0) onSaveSettings(partial);
+      }
       finish();
       return;
+    }
+    // 스텝 3에서 "다음" → 금연 시작일 저장
+    if (!guideOnly && step === 2 && quitDate) {
+      onSaveSettings({ quitDate });
     }
     setStep(s => s + 1);
   }
 
   function skip() {
-    if (step === 3) {
+    if (step === totalSteps - 1) {
       finish();
       return;
     }
@@ -67,15 +73,15 @@ export default function Tutorial({ onClose, onSaveSettings }: Props) {
     else if (step > 0) setStep(s => s - 1); // 오른쪽 스와이프 → 이전
   }
 
-  const isLast = step === TOTAL_STEPS - 1;
-  const showSkip = step >= 2;
+  const isLast = step === totalSteps - 1;
+  const showSkip = !guideOnly && step >= 2;
 
   return (
     <div className={`${styles.overlay} ${closing ? styles.closing : ''}`}>
       <div className={styles.card} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
         {/* 스텝 인디케이터 */}
         <div className={styles.dots}>
-          {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+          {Array.from({ length: totalSteps }, (_, i) => (
             <div key={i} className={`${styles.dot} ${i === step ? styles.dotActive : ''} ${i < step ? styles.dotDone : ''}`} />
           ))}
         </div>
@@ -204,7 +210,7 @@ export default function Tutorial({ onClose, onSaveSettings }: Props) {
             <Button variant="ghost" fullWidth onClick={skip}>건너뛰기</Button>
           )}
           <Button variant="primary" fullWidth onClick={next}>
-            {isLast ? '시작하기' : '다음'}
+            {isLast ? (guideOnly ? '확인' : '시작하기') : '다음'}
           </Button>
         </div>
       </div>

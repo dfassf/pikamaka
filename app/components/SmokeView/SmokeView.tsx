@@ -20,6 +20,7 @@ interface Props {
   beforeLeaveRef: React.MutableRefObject<(() => void) | null>;
   showMicTip?: boolean;
   onMicTipDismiss?: () => void;
+  onShowGuide?: () => void;
 }
 
 const STATUS_TEXT: Record<StatusType, string> = {
@@ -30,7 +31,7 @@ const STATUS_TEXT: Record<StatusType, string> = {
   exhaling: '후—',
 };
 
-export default function SmokeView({ settings, onViewRecord, beforeLeaveRef, showMicTip, onMicTipDismiss }: Props) {
+export default function SmokeView({ settings, onViewRecord, beforeLeaveRef, showMicTip, onMicTipDismiss, onShowGuide }: Props) {
   const [status, setStatus] = useState<StatusType>('idle');
   const [inhaling, setInhaling] = useState(false);
   const [hintVisible, setHintVisible] = useState(true);
@@ -222,6 +223,8 @@ export default function SmokeView({ settings, onViewRecord, beforeLeaveRef, show
       <div className={styles.canvasWrap}>
         <canvas ref={canvasRef} />
       </div>
+
+      <button className={styles.helpButton} onClick={onShowGuide} title="사용법 보기">?</button>
 
       {micActive && (
         <div className={styles.volMeter}>
