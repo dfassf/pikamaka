@@ -51,3 +51,12 @@
 .empty { text-align: center; padding: 60px 20px; color: var(--text-dim); }
 .emptyIcon { font-size: 48px; margin-bottom: 16px; }
 .empty p { font-size: 14px; line-height: 1.6; }
+
+.tipCard {
+  background: linear-gradient(135deg, #152025, #101a20);
+  border: 1px solid rgba(74, 222, 128, 0.15);
+  border-radius: 14px;
+  padding: 20px;
+}
+.tipCard h3 { font-size: 14px; color: var(--success); margin-bottom: 10px; }
+.tipCard p { font-size: 13px; color: var(--text-dim); line-height: 1.6; }

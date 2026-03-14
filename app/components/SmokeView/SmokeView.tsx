@@ -49,7 +49,7 @@ export default function SmokeView({ settings, onViewRecord, beforeLeaveRef }: Pr
 
   // --- 완료 처리 (저장 + 진동 + 메시지) ---
   const handleComplete = useCallback(() => {
-    addRecord(cig.puffsRef.current);
+    addRecord();
     const todayCount = getTodayCount();
     if (todayCount <= settings.dailyGoal) {
       setDoneMessage(`오늘 ${todayCount}개비째입니다.\n진짜 담배 대신 이걸로 충분해요.`);
@@ -57,7 +57,7 @@ export default function SmokeView({ settings, onViewRecord, beforeLeaveRef }: Pr
       setDoneMessage(`오늘 ${todayCount}개비 — 목표(${settings.dailyGoal})를 넘었어요.\n조금만 줄여볼까요?`);
     }
     if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-  }, [settings.dailyGoal, cig.puffsRef]);
+  }, [settings.dailyGoal]);
 
   // 모금 등록 + 완료 시 부가 처리
   const doPuff = useCallback(() => {
@@ -76,7 +76,7 @@ export default function SmokeView({ settings, onViewRecord, beforeLeaveRef }: Pr
   // 탭 이동 시 진행 중인 모금 자동 저장 + 마이크 정리
   beforeLeaveRef.current = () => {
     if (cig.puffsRef.current > 0 && !cig.doneRef.current) {
-      addRecord(cig.puffsRef.current);
+      addRecord();
     }
     if (micActiveRef.current) {
       stopMic();

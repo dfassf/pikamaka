@@ -17,7 +17,7 @@ export default function SettingsPanel({ settings, onSettingsChange }: Props) {
   const [maxPuffs, setMaxPuffs] = useState(settings.maxPuffs);
   const [quitDate, setQuitDate] = useState(settings.quitDate || '');
   const [prevDailyAmount, setPrevDailyAmount] = useState(settings.prevDailyAmount?.toString() || '');
-  const [packPrice, setPackPrice] = useState(settings.packPrice?.toString() || '');
+  const [packPrice, setPackPrice] = useState((settings.packPrice ?? 4500).toString());
 
   function save(overrides: Partial<AppSettings> = {}) {
     const updated: AppSettings = {

@@ -1,6 +1,5 @@
 export interface CigaretteRecord {
   time: string;
-  puffs: number;
 }
 
 export interface DayRecord {

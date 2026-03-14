@@ -59,11 +59,56 @@
 .barCount { font-size: 11px; font-weight: 700; min-height: 14px; }
 .barLabel { font-size: 11px; color: var(--text-dim); }
 
-.tipCard {
-  background: linear-gradient(135deg, #152025, #101a20);
-  border: 1px solid rgba(74, 222, 128, 0.15);
-  border-radius: 14px;
+.insightCard {
+  background: linear-gradient(135deg, rgba(255,107,53,0.1), rgba(255,107,53,0.03));
+  border: 1px solid rgba(255,107,53,0.15);
+  border-radius: 16px;
   padding: 20px;
 }
-.tipCard h3 { font-size: 14px; color: var(--success); margin-bottom: 10px; }
-.tipCard p { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+.insightCard h3 { font-size: 14px; color: var(--accent); margin-bottom: 16px; }
+.insightList { display: flex; flex-direction: column; gap: 10px; }
+.insightItem {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.insightLabel { font-size: 13px; color: var(--text-dim); }
+.insightValue { font-size: 18px; font-weight: 800; }
+.insightSaved { color: var(--success); }
+.insightMessage { font-size: 13px; color: var(--text-dim); line-height: 1.6; margin-top: 16px; }
+
+/* 잠금 상태 */
+.lockedWrap {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+}
+.lockedBlur {
+  filter: blur(12px);
+  pointer-events: none;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.lockedOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.unlockButton {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 32px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(255, 107, 53, 0.3);
+}

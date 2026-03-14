@@ -37,7 +37,7 @@ export default function Home() {
       <div className={styles.view}>
         {currentView === 'smoke' && <SmokeView settings={settings} onViewRecord={() => handleViewChange('record')} beforeLeaveRef={beforeLeaveRef} />}
         {currentView === 'record' && <RecordView settings={settings} />}
-        {currentView === 'stats' && <StatsView />}
+        {currentView === 'stats' && <StatsView settings={settings} />}
         {currentView === 'settings' && <SettingsPanel settings={settings} onSettingsChange={setSettings} />}
       </div>
 

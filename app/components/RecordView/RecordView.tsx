@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { loadData, getTodayCount, todayKey } from '@/app/lib/storage';
+import { TIPS } from '@/app/lib/constants';
 import { AppSettings } from '@/app/lib/types';
 import styles from './RecordView.module.css';
 
@@ -12,6 +13,7 @@ interface Props {
 export default function RecordView({ settings }: Props) {
   const data = useMemo(() => loadData(), []);
   const todayCount = getTodayCount();
+  const tip = useMemo(() => TIPS[Math.floor(Math.random() * TIPS.length)], []);
   const today = todayKey();
 
   const pct = Math.min(100, (todayCount / settings.dailyGoal) * 100);
@@ -61,6 +63,11 @@ export default function RecordView({ settings }: Props) {
             );
           })
         )}
+      </div>
+
+      <div className={styles.tipCard}>
+        <h3>금연 팁</h3>
+        <p>{tip}</p>
       </div>
     </div>
   );

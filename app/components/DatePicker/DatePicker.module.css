@@ -33,10 +33,10 @@
   inset: 0;
   background: linear-gradient(
     to bottom,
-    var(--bg-card) 0%,
+    var(--bg-dark) 0%,
     transparent 30%,
     transparent 70%,
-    var(--bg-card) 100%
+    var(--bg-dark) 100%
   );
   pointer-events: none;
   z-index: 2;

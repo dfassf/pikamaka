@@ -40,7 +40,7 @@ export function saveSettings(settings: AppSettings): void {
   localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
 }
 
-export function addRecord(puffs: number): void {
+export function addRecord(): void {
   const data = loadData();
   const key = todayKey();
   let day = data.records.find(r => r.date === key);
@@ -50,7 +50,6 @@ export function addRecord(puffs: number): void {
   }
   day.cigarettes.push({
     time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-    puffs,
   });
   saveData(data);
 }
@@ -67,4 +66,18 @@ export function isTutorialSeen(): boolean {
 
 export function markTutorialSeen(): void {
   localStorage.setItem(STORAGE_KEYS.TUTORIAL_SEEN, '1');
+}
+
+export function isStatsUnlocked(): boolean {
+  try {
+    return localStorage.getItem(STORAGE_KEYS.STATS_UNLOCK) === todayKey();
+  } catch {
+    return false;
+  }
+}
+
+export function unlockStats(): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.STATS_UNLOCK, todayKey());
+  } catch {}
 }

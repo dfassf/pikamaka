@@ -1,11 +1,31 @@
 'use client';
 
-import { useMemo } from 'react';
-import { loadData, getTodayCount, formatDateKey } from '@/app/lib/storage';
-import { TIPS } from '@/app/lib/constants';
+import { useState, useMemo, useCallback } from 'react';
+import { AppSettings } from '@/app/lib/types';
+import { loadData, getTodayCount, formatDateKey, isStatsUnlocked, unlockStats } from '@/app/lib/storage';
+import { QUIT_MILESTONES } from '@/app/lib/constants';
 import styles from './StatsView.module.css';
 
-export default function StatsView() {
+const PACK_SIZE = 20;
+
+interface Props {
+  settings: AppSettings;
+}
+
+// TODO: 앱 환경(App-in-Toss 등) 감지 시 true 반환하도록 변경
+function isAppEnvironment(): boolean {
+  return false;
+}
+
+export default function StatsView({ settings }: Props) {
+  const [locked, setLocked] = useState(() => isAppEnvironment() && !isStatsUnlocked());
+
+  const handleUnlock = useCallback(() => {
+    // TODO: 광고 SDK 연동 시 여기서 loadAndShowRewarded() 호출
+    unlockStats();
+    setLocked(false);
+  }, []);
+
   const data = loadData();
   const records = data.records;
   const totalDays = records.length;
@@ -44,8 +64,72 @@ export default function StatsView() {
 
   const maxCount = Math.max(...weeklyDays.map(d => d.count), 1);
 
-  // 랜덤 팁
-  const tip = useMemo(() => TIPS[Math.floor(Math.random() * TIPS.length)], []);
+  // 인사이트 계산
+  const insight = useMemo(() => {
+    if (!settings.quitDate || !settings.prevDailyAmount) return null;
+    const quit = new Date(settings.quitDate + 'T00:00:00');
+    const now = new Date();
+    const diffMs = now.getTime() - quit.getTime();
+    if (diffMs < 0) return null;
+
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const notSmoked = settings.prevDailyAmount * days;
+    const pricePerCig = (settings.packPrice ?? 4500) / PACK_SIZE;
+    const saved = Math.round(notSmoked * pricePerCig);
+
+    const milestone = QUIT_MILESTONES.find(m => days >= m.minDays)!;
+    return { days, notSmoked, saved, message: milestone.message };
+  }, [settings.quitDate, settings.prevDailyAmount, settings.packPrice]);
+
+  if (locked) {
+    return (
+      <div className={styles.root}>
+        <div className={styles.lockedWrap}>
+          <div className={styles.lockedBlur} aria-hidden>
+            <div className={styles.statCards}>
+              {['오늘', '일 평균', '최저 기록', '총 기록'].map(label => (
+                <div key={label} className={styles.statCard}>
+                  <div className={styles.statLabel}>{label}</div>
+                  <div className={styles.statValue}>--</div>
+                  <div className={styles.statUnit}>-</div>
+                </div>
+              ))}
+            </div>
+            <div className={styles.weeklyChart}>
+              <h3>주간 흡연량</h3>
+              <div className={styles.chartBars}>
+                {['일','월','화','수','목','금','토'].map(d => (
+                  <div key={d} className={styles.barWrapper}>
+                    <div className={styles.barCount} />
+                    <div className={styles.barTrack}>
+                      <div className={styles.bar} style={{ height: `${20 + Math.random() * 60}%` }} />
+                    </div>
+                    <div className={styles.barLabel}>{d}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className={styles.insightCard}>
+              <h3>금연 인사이트</h3>
+              <div className={styles.insightList}>
+                {['금연 일째', '절약한 금액', '안 피운 개비'].map(label => (
+                  <div key={label} className={styles.insightItem}>
+                    <div className={styles.insightLabel}>{label}</div>
+                    <div className={styles.insightValue}>---</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className={styles.lockedOverlay}>
+            <button className={styles.unlockButton} onClick={handleUnlock}>
+              통계 보기
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.root}>
@@ -90,10 +174,28 @@ export default function StatsView() {
         </div>
       </div>
 
-      <div className={styles.tipCard}>
-        <h3>금연 팁</h3>
-        <p>{tip}</p>
-      </div>
+      {insight && (
+        <div className={styles.insightCard}>
+          <h3>금연 인사이트</h3>
+          <div className={styles.insightList}>
+            <div className={styles.insightItem}>
+              <div className={styles.insightLabel}>금연 일째</div>
+              <div className={styles.insightValue}>{insight.days}일</div>
+            </div>
+            <div className={styles.insightItem}>
+              <div className={styles.insightLabel}>절약한 금액</div>
+              <div className={`${styles.insightValue} ${styles.insightSaved}`}>
+                {insight.saved.toLocaleString()}원
+              </div>
+            </div>
+            <div className={styles.insightItem}>
+              <div className={styles.insightLabel}>안 피운 개비</div>
+              <div className={styles.insightValue}>{insight.notSmoked.toLocaleString()}개비</div>
+            </div>
+          </div>
+          <p className={styles.insightMessage}>{insight.message}</p>
+        </div>
+      )}
     </div>
   );
 }

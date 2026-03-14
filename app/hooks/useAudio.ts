@@ -191,8 +191,5 @@ export default function useAudio() {
     lastMicStateRef.current = 'idle';
   }, []);
 
-  const isActive = useCallback(() => activeRef.current, []);
-  const getLastState = useCallback(() => lastMicStateRef.current, []);
-
-  return { startMic, stopMic, isActive, getLastState };
+  return { startMic, stopMic };
 }
