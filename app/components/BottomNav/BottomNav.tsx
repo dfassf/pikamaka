@@ -14,8 +14,9 @@ export default function BottomNav({ currentView, onChangeView }: Props) {
         onClick={() => onChangeView('smoke')}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M17 3.34a10 10 0 1 1-14.99 8.3A10 10 0 0 1 17 3.34" />
-          <path d="M12 6v6l4 2" />
+          <path d="M3 14a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2z" />
+          <path d="M8 13v4" />
+          <path d="M16 5v.5a2 2 0 0 0 2 2 2 2 0 0 1 2 2v.5" />
         </svg>
         <span>흡연</span>
       </button>

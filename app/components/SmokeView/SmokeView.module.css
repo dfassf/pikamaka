@@ -337,6 +337,46 @@
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 16px rgba(255, 107, 53, 0.4);
   pointer-events: none;
 }
+/* 마이크 권한 거부 모달 */
+.micDeniedModal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 24px 24px;
+  max-width: 260px;
+  width: 100%;
+  text-align: center;
+  animation: micTipSlideIn 0.3s ease;
+}
+.micDeniedIcon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255, 107, 53, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  color: var(--accent);
+}
+.micDeniedModal h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.micDeniedModal p {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.7;
+}
+.micDeniedModal strong {
+  color: var(--text);
+}
+
 .micTipTooltip {
   position: absolute;
   top: 58px;

@@ -40,6 +40,7 @@ export default function SmokeView({ settings, onViewRecord, beforeLeaveRef, show
   const [volActive, setVolActive] = useState(false);
   const [showBoost, setShowBoost] = useState(false);
   const [doneMessage, setDoneMessage] = useState('');
+  const [showMicDenied, setShowMicDenied] = useState(false);
 
   const emberRef = useRef<HTMLDivElement>(null);
   const micActiveRef = useRef(false);
@@ -87,15 +88,17 @@ export default function SmokeView({ settings, onViewRecord, beforeLeaveRef, show
   });
 
   // 탭 이동 시 진행 중인 모금 자동 저장 + 마이크 정리
-  beforeLeaveRef.current = () => {
-    if (cig.puffsRef.current > 0 && !cig.doneRef.current) {
-      addRecord();
-    }
-    if (micActiveRef.current) {
-      stopMic();
-      micActiveRef.current = false;
-    }
-  };
+  useEffect(() => {
+    beforeLeaveRef.current = () => {
+      if (cig.puffsRef.current > 0 && !cig.doneRef.current) {
+        addRecord();
+      }
+      if (micActiveRef.current) {
+        stopMic();
+        micActiveRef.current = false;
+      }
+    };
+  }, [beforeLeaveRef, cig.puffsRef, cig.doneRef, stopMic]);
 
   const defaultStatus = useCallback((): StatusType =>
     micActiveRef.current ? 'micReady' : 'idle'
@@ -118,7 +121,7 @@ export default function SmokeView({ settings, onViewRecord, beforeLeaveRef, show
   }, [handleReset]);
 
   // --- 터치 이벤트 핸들러 ---
-  const startInhale = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+  const startInhale = (e: React.MouseEvent | React.TouchEvent) => {
     if (cig.doneRef.current) return;
     e.preventDefault();
     if (hintVisible) setHintVisible(false);
@@ -126,9 +129,9 @@ export default function SmokeView({ settings, onViewRecord, beforeLeaveRef, show
     setStatus('inhaling');
     if (navigator.vibrate) navigator.vibrate(30);
     touch.startInhale();
-  }, [hintVisible, touch, cig.doneRef]);
+  };
 
-  const endInhale = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+  const endInhale = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     const inhaleMs = touch.endInhale();
     if (inhaleMs === 0) return;
@@ -145,7 +148,7 @@ export default function SmokeView({ settings, onViewRecord, beforeLeaveRef, show
         setStatus(defaultStatus());
       }
     }, EXHALE_DISPLAY_MS);
-  }, [emitSmoke, touch, cig.doneRef, defaultStatus]);
+  };
 
   // --- 마이크 콜백 ---
   const handleMicStateChange = useCallback((state: MicState, prevState: MicState) => {
@@ -178,15 +181,15 @@ export default function SmokeView({ settings, onViewRecord, beforeLeaveRef, show
     }
   }, [doPuff, emitSmoke]);
 
-  const handleMicVolume = useCallback((rms: number, isQuiet: boolean) => {
+  const handleMicVolume = (rms: number, isQuiet: boolean) => {
     setVolPct(Math.min(100, rms * 2000));
     setVolActive(!isQuiet);
     if (exhalingRef.current && !cig.doneRef.current) {
       emitSmoke(Math.floor(rms * 150) + 3, true, true);
     }
-  }, [emitSmoke, cig.doneRef]);
+  };
 
-  const toggleMic = useCallback(async () => {
+  const toggleMic = async () => {
     if (micActiveRef.current) {
       stopMic();
       micActiveRef.current = false;
@@ -205,9 +208,9 @@ export default function SmokeView({ settings, onViewRecord, beforeLeaveRef, show
       setHintVisible(false);
       setStatus('micReady');
     } catch {
-      alert('마이크 권한이 필요합니다.');
+      setShowMicDenied(true);
     }
-  }, [startMic, stopMic, handleMicStateChange, handleMicVolume, cig.doneRef, touch.pressingRef]);
+  };
 
   // --- 상태 텍스트 렌더링 ---
   const isAction = status === 'inhaling' || status === 'micInhaling';
@@ -279,6 +282,33 @@ export default function SmokeView({ settings, onViewRecord, beforeLeaveRef, show
       </div>
 
       {cig.done && <DoneOverlay message={doneMessage} onNewCig={handleReset} onViewRecord={onViewRecord} />}
+
+      {showMicDenied && (
+        <div className={styles.micTipOverlay} role="dialog" aria-modal="true" onClick={() => setShowMicDenied(false)}>
+          <div className={styles.micDeniedModal} onClick={e => e.stopPropagation()}>
+            <div className={styles.micDeniedIcon}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </div>
+            <h3>마이크 권한이 필요해요</h3>
+            <p>
+              마이크로 피우려면<br/>
+              마이크 접근 권한을 허용해 주세요.<br/><br/>
+              <strong>&ldquo;습&rdquo;</strong> 소리로 들이쉬고<br/>
+              <strong>&ldquo;후&rdquo;</strong> 소리로 내쉬는<br/>
+              음성 인식 기능에 사용됩니다.
+            </p>
+            <button className={styles.micTipButton} onClick={() => setShowMicDenied(false)} autoFocus>
+              확인
+            </button>
+          </div>
+        </div>
+      )}
 
       {showMicTip && (
         <div className={styles.micTipOverlay} role="dialog" aria-modal="true" aria-labelledby="mic-tip-title" onClick={onMicTipDismiss}>
