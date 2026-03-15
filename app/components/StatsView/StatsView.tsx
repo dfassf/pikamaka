@@ -5,6 +5,7 @@ import { AppSettings } from '@/app/lib/types';
 import { loadData, getTodayCount, formatDateKey, isStatsUnlocked, unlockStats } from '@/app/lib/storage';
 import { QUIT_MILESTONES } from '@/app/lib/constants';
 import { isIntossRuntime } from '@/app/lib/intoss';
+import { loadAndShowInterstitial } from '@/app/lib/tossAds';
 import styles from './StatsView.module.css';
 
 const PACK_SIZE = 20;
@@ -17,8 +18,15 @@ interface Props {
 export default function StatsView({ settings }: Props) {
   const [locked, setLocked] = useState(() => isIntossRuntime() && !isStatsUnlocked());
 
-  const handleUnlock = useCallback(() => {
-    // TODO: 광고 SDK 연동 시 여기서 loadAndShowRewarded() 호출
+  const handleUnlock = useCallback(async () => {
+    const result = await loadAndShowInterstitial();
+    if (result === false) {
+      // 광고 미지원 환경(웹)이면 바로 잠금 해제
+      unlockStats();
+      setLocked(false);
+      return;
+    }
+    // 광고 표시 후 잠금 해제
     unlockStats();
     setLocked(false);
   }, []);
