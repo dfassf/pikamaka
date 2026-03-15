@@ -3,6 +3,13 @@
 import { useRef, useCallback } from 'react';
 import { MicState } from '@/app/lib/types';
 import { AUDIO } from '@/app/lib/constants';
+import {
+  detectMicStateFromFrame,
+  getEnergyRatios,
+  getUpdatedNoiseFloor,
+  getVolumeThresholds,
+  resolveDebouncedState,
+} from '@/app/lib/audioDetection';
 
 interface UseAudioCallbacks {
   onStateChange: (state: MicState, prevState: MicState) => void;
@@ -37,15 +44,6 @@ export default function useAudio() {
     return Math.sqrt(sum / timeBuf.length);
   }, []);
 
-  // 노이즈 바닥 갱신
-  const updateNoiseFloor = useCallback((rms: number, isSounding: boolean) => {
-    const alpha = nfInitRef.current ? 0.2 : (isSounding ? 0.0 : 0.02);
-    if (alpha > 0) {
-      noiseFloorRef.current = noiseFloorRef.current * (1 - alpha) + rms * alpha;
-    }
-    nfInitRef.current = false;
-  }, []);
-
   // 감지 루프
   const detectSound = useCallback(function loop(doneRef: React.RefObject<boolean>) {
     if (!activeRef.current) return;
@@ -65,63 +63,56 @@ export default function useAudio() {
 
     // 2) 주파수 대역 비율
     analyser.getByteFrequencyData(freqData);
-    const nyquist = audioCtx.sampleRate / 2;
-    const b200 = Math.floor(freqData.length * AUDIO.BAND_LOW_START / nyquist);
-    const b1200 = Math.floor(freqData.length * AUDIO.BAND_LOW_END / nyquist);
-    const b2000 = Math.floor(freqData.length * AUDIO.BAND_HISS_START / nyquist);
-    const b6000 = Math.floor(freqData.length * AUDIO.BAND_HISS_END / nyquist);
-
-    let eLow = 0, eHiss = 0, eTot = 0;
-    for (let i = 0; i < freqData.length; i++) {
-      const v = freqData[i];
-      eTot += v;
-      if (i >= b200 && i < b1200) eLow += v;
-      if (i >= b2000 && i < b6000) eHiss += v;
-    }
-    const lowR = eTot > 0 ? eLow / eTot : 0;
-    const hissR = eTot > 0 ? eHiss / eTot : 0;
+    const { lowRatio, hissRatio } = getEnergyRatios(freqData, audioCtx.sampleRate);
 
     // 3) 노이즈 바닥 + 동적 임계값
-    const isSounding = rms > noiseFloorRef.current + AUDIO.SOUNDING_OFFSET;
-    updateNoiseFloor(rms, isSounding);
-
-    const QUIET = noiseFloorRef.current + AUDIO.QUIET_OFFSET;
-    const LOUD = noiseFloorRef.current + AUDIO.LOUD_OFFSET;
+    const currentNoiseFloor = noiseFloorRef.current;
+    const isSounding = rms > currentNoiseFloor + AUDIO.SOUNDING_OFFSET;
+    const nextNoiseFloor = getUpdatedNoiseFloor(
+      currentNoiseFloor,
+      rms,
+      isSounding,
+      nfInitRef.current
+    );
+    noiseFloorRef.current = nextNoiseFloor;
+    nfInitRef.current = false;
+    const { quiet, loud } = getVolumeThresholds(nextNoiseFloor);
 
     // 볼륨 콜백
-    cbs.onVolume(rms, rms <= QUIET);
+    cbs.onVolume(rms, rms <= quiet);
 
     // 4) 상태 판정
-    let detected: MicState = 'idle';
-    if (rms > LOUD && lowR > AUDIO.LOW_R_THRESHOLD) {
-      detected = 'exhaling';
-    } else if (hissR > AUDIO.HISS_THRESHOLD) {
-      detected = 'inhaling';
-    } else if (rms > QUIET * 3) {
-      detected = 'inhaling';
-    }
+    const detected = detectMicStateFromFrame({
+      rms,
+      lowRatio,
+      hissRatio,
+      quietThreshold: quiet,
+      loudThreshold: loud,
+    });
 
     // 5) 시간 기반 디바운싱
     const now = performance.now();
-    if (detected !== pendingStateRef.current) {
-      pendingStateRef.current = detected;
-      pendingStartMsRef.current = now;
-    }
+    const debounceResult = resolveDebouncedState({
+      detectedState: detected,
+      pendingState: pendingStateRef.current,
+      pendingStartMs: pendingStartMsRef.current,
+      lastCommittedState: lastMicStateRef.current,
+      nowMs: now,
+    });
+    pendingStateRef.current = debounceResult.pendingState;
+    pendingStartMsRef.current = debounceResult.pendingStartMs;
 
-    const holdMs = now - pendingStartMsRef.current;
-    const debounceMs = detected === 'idle' ? AUDIO.DEBOUNCE_IDLE : AUDIO.DEBOUNCE_ACTIVE;
-
-    if (holdMs >= debounceMs && lastMicStateRef.current !== detected) {
+    if (debounceResult.committedState) {
       const prevState = lastMicStateRef.current;
-      lastMicStateRef.current = detected;
-      cbs.onStateChange(detected, prevState);
+      lastMicStateRef.current = debounceResult.committedState;
+      cbs.onStateChange(debounceResult.committedState, prevState);
     }
 
     // 후— 상태일 때 연기 계속 (콜백에서 처리하도록 rms 전달)
     // → onVolume에서 처리
 
     requestAnimationFrame(() => loop(doneRef));
-  }, [getRMS, updateNoiseFloor]);
+  }, [getRMS]);
 
   // 마이크 시작
   const startMic = useCallback(async (
